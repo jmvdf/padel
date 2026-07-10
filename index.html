@@ -59,27 +59,12 @@ h1,h2,h3{font-family:'Archivo',sans-serif;margin:0;letter-spacing:-.01em}
 .tab:focus-visible{outline:3px solid var(--teal-soft);outline-offset:2px}
 
 section[hidden]{display:none}
+#p-schema[hidden]{display:none}
 .panel{padding:6px 0 40px}
 #roundsRoot,#p-schema{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;align-items:start}
 #finaleBox,#p-schema .md.fin{grid-column:1/-1}
-#p-scores>.setup{margin-bottom:2px}
 /* keep single-column panels readable-width */
 #p-stand,#p-info{max-width:660px;margin:0 auto}
-
-/* setup / lune toggle */
-.setup{background:var(--card);border:1px solid var(--line);border-radius:14px;
-  box-shadow:var(--shadow);padding:12px 14px;margin:14px 0 6px;display:flex;align-items:center;gap:12px}
-.setup .txt{flex:1;min-width:0}
-.setup .txt b{font-family:'Archivo';font-weight:800;font-size:13px}
-.setup .txt small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
-.switch{position:relative;width:52px;height:30px;flex:none}
-.switch input{opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
-.switch .tr{position:absolute;inset:0;background:#CBD6D1;border-radius:999px;transition:.18s;pointer-events:none}
-.switch .kn{position:absolute;top:3px;left:3px;width:24px;height:24px;background:#fff;border-radius:50%;
-  transition:.18s;box-shadow:0 1px 3px rgba(0,0,0,.25);pointer-events:none}
-.switch input:checked~.tr{background:var(--teal)}
-.switch input:checked~.kn{transform:translateX(22px)}
-.switch input:focus-visible~.tr{outline:3px solid var(--teal-soft);outline-offset:2px}
 
 .round{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);margin:0;overflow:hidden}
 .round>header{display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--line)}
@@ -129,10 +114,7 @@ section[hidden]{display:none}
 .row.lead .rk{color:var(--ball)}
 .row.lead .pts{color:var(--ball)}
 .board .foot{color:#8FB2AC;font-size:11px;padding:6px 12px 8px;text-align:center}
-.actions{display:flex;gap:8px;margin-top:6px}
 .btn{font-family:'Archivo';font-weight:800;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;border-radius:10px;padding:10px 14px;cursor:pointer;border:1.5px solid var(--line);background:#fff;color:var(--ink)}
-.btn.ghost{color:var(--muted)}
-.btn.armed{background:var(--coral);border-color:var(--coral);color:#fff}
 .btn:focus-visible{outline:3px solid var(--teal-soft);outline-offset:2px}
 
 /* WK-style schema */
@@ -156,6 +138,9 @@ section[hidden]{display:none}
 .fnote{padding:10px 12px;font-size:12.5px;color:var(--muted)}
 
 /* info */
+.langsw{display:flex;gap:8px;margin:2px 0 14px}
+.lang{flex:none}
+.lang.active{background:var(--court);color:#fff;border-color:var(--court)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px;margin:14px 0}
 .card h3{font-size:15px;text-transform:uppercase;letter-spacing:.08em;color:var(--court);margin-bottom:6px;display:flex;align-items:center;gap:8px}
 .card h3:before{content:"";width:16px;height:3px;background:var(--ball);border-radius:2px}
@@ -179,6 +164,7 @@ section[hidden]{display:none}
 .champ{margin-top:10px;text-align:center;font-family:'Archivo';font-weight:800;font-size:14px;color:var(--court);background:linear-gradient(90deg,rgba(216,236,58,.35),rgba(216,236,58,.12));border:1px solid rgba(12,59,55,.15);border-radius:10px;padding:9px 10px}
 .champ.tie{background:var(--coral-soft);color:var(--coral);border-color:rgba(232,115,74,.3)}
 footer{color:var(--muted);font-size:11.5px;text-align:center;padding:10px 0 26px}
+footer .credit{display:block;margin-top:4px;color:#8AA39C}
 @media (max-width:420px){.rmeta .l{display:none}.team{padding:8px}.tname{font-size:12.5px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -209,10 +195,6 @@ footer{color:var(--muted);font-size:11.5px;text-align:center;padding:10px 0 26px
 
 <main class="wrap">
   <section id="p-scores" class="panel" role="tabpanel" aria-labelledby="tab-scores">
-    <div class="setup">
-      <div class="txt"><b>Speelt Lune mee?</b><small id="setupSub">10 spelers · 2 rusten per ronde</small></div>
-      <label class="switch"><input type="checkbox" id="luneToggle" aria-label="Lune speelt mee"><span class="tr"></span><span class="kn"></span></label>
-    </div>
     <div id="roundsRoot"></div>
   </section>
 
@@ -221,37 +203,56 @@ footer{color:var(--muted);font-size:11.5px;text-align:center;padding:10px 0 26px
   <section id="p-stand" class="panel" role="tabpanel" aria-labelledby="tab-stand" hidden>
     <div class="board"><h2><span class="dot"></span>Live stand</h2><div id="boardRows"></div>
       <div class="foot">Gerangschikt op <b>gemiddelde punten per gespeeld potje</b> · gelijke stand = gedeelde plaats</div></div>
-    <div class="actions"><button class="btn ghost" id="resetBtn">Scores wissen</button></div>
   </section>
 
   <section id="p-info" class="panel" role="tabpanel" aria-labelledby="tab-info" hidden>
-    <div class="card"><h3>Zo werkt het</h3>
-      <p>Elke ronde speel je met een nieuwe partner tegen een ander koppel. Je speelt in tweetallen, maar telt punten voor jezelf.</p>
-      <ul>
-        <li>Een potje gaat tot <b>maximaal 24 punten samen</b> (24 rally's). Je stopt bij 24 óf als de 12 minuten om zijn — dus 4–10 of 4–20 kan, samen nooit méér dan 24.</li>
-        <li>Eindigt het bijv. 14–10, dan krijgen <b>béide</b> spelers van het winnende team 14 punten en béide verliezers 10.</li>
-        <li>Elk duo speelt maar één keer samen; elke ronde nieuwe combinaties.</li>
-        <li>De stand gaat op <b>gemiddelde punten per potje</b> (totaal ÷ aantal gespeelde potjes). Zo telt het even zwaar of je er 5 of 6 speelt.</li>
-        <li>Na 8 rondes bepaalt dat gemiddelde de <b>finale (15:45–16:00)</b>: nummer <b>1 &amp; 3</b> spelen samen tegen nummer <b>2 &amp; 4</b>. De winnaars zijn de toernooiwinnaars.</li>
-        <li>Vul de scores in bij <b>Scores</b>; het tabblad <b>Stand</b> telt automatisch op.</li>
-      </ul>
+    <div class="langsw">
+      <button class="btn lang active" id="langNL" type="button">NL</button>
+      <button class="btn lang" id="langEN" type="button">EN</button>
     </div>
-    <div class="card"><h3>Tijdschema</h3><ul class="tl" id="timeline"></ul></div>
+
+    <div id="info-nl">
+      <div class="card"><h3>Zo werkt het</h3>
+        <p>Elke ronde speel je met een nieuwe partner tegen een ander koppel. Je speelt in tweetallen, maar telt punten voor jezelf.</p>
+        <ul>
+          <li>Een potje gaat tot <b>maximaal 24 punten samen</b> (24 rally's). Je stopt bij 24 óf als de 12 minuten om zijn — dus 4–10 of 4–20 kan, samen nooit méér dan 24.</li>
+          <li>Eindigt het bijv. 14–10, dan krijgen <b>béide</b> spelers van het winnende team 14 punten en béide verliezers 10.</li>
+          <li>Elk duo speelt maar één keer samen; elke ronde nieuwe combinaties.</li>
+          <li>De stand gaat op <b>gemiddelde punten per potje</b> (totaal ÷ aantal gespeelde potjes). Zo telt het even zwaar of je er 5 of 6 speelt.</li>
+          <li>Na 8 rondes bepaalt dat gemiddelde de <b>finale (15:45–16:00)</b>: nummer <b>1 &amp; 3</b> spelen samen tegen nummer <b>2 &amp; 4</b>. De winnaars zijn de toernooiwinnaars.</li>
+          <li>Vul de scores in bij <b>Scores</b>; het tabblad <b>Stand</b> telt automatisch op.</li>
+        </ul>
+      </div>
+      <div class="card"><h3>Tijdschema</h3><ul class="tl" id="timeline-nl"></ul></div>
+    </div>
+
+    <div id="info-en" hidden>
+      <div class="card"><h3>How it works</h3>
+        <p>Each round you play with a new partner against a different pair. You play in twos, but points count for you individually.</p>
+        <ul>
+          <li>A game goes up to <b>24 points combined</b> (24 rallies). You stop at 24 or when the 12 minutes are up — so 4–10 or 4–20 is possible, but never more than 24 combined.</li>
+          <li>If it ends, say, 14–10, <b>both</b> players on the winning team get 14 points and both losers get 10.</li>
+          <li>Each duo plays together only once; new combinations every round.</li>
+          <li>The standings are based on <b>average points per game played</b> (total ÷ number of games played). That way it counts equally whether you play 5 or 6 games.</li>
+          <li>After 8 rounds, that average determines the <b>final (15:45–16:00)</b>: number <b>1 &amp; 3</b> play together against number <b>2 &amp; 4</b>. The winners are the tournament champions.</li>
+          <li>Enter the scores under <b>Scores</b>; the <b>Standings</b> tab adds it up automatically.</li>
+        </ul>
+      </div>
+      <div class="card"><h3>Schedule</h3><ul class="tl" id="timeline-en"></ul></div>
+    </div>
   </section>
 </main>
 
-<footer>Vul alleen de scores in — de stand rekent zichzelf uit.</footer>
+<footer>Vul alleen de scores in — de stand rekent zichzelf uit.<span class="credit">made by soof &amp; jm 2026</span></footer>
 
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-database-compat.js"></script>
 <script>
 const DATA10 = {"men": ["Loek", "Joris", "Maurits", "MJ", "Jouk"], "women": ["Hannah", "Hannah L", "Iris", "Pleun", "Soof"], "rounds": [{"round": 1, "time": "14:08", "endtime": "14:20", "rest": ["Loek", "Iris"], "courts": [{"baan": "4", "a": ["Joris", "Hannah L"], "b": ["Maurits", "Hannah"]}, {"baan": "5", "a": ["MJ", "Pleun"], "b": ["Jouk", "Soof"]}]}, {"round": 2, "time": "14:20", "endtime": "14:32", "rest": ["Joris", "Pleun"], "courts": [{"baan": "4", "a": ["Loek", "Hannah L"], "b": ["MJ", "Soof"]}, {"baan": "5", "a": ["Maurits", "Iris"], "b": ["Jouk", "Hannah"]}]}, {"round": 3, "time": "14:32", "endtime": "14:44", "rest": ["Maurits", "Soof"], "courts": [{"baan": "4", "a": ["Loek", "Hannah"], "b": ["Jouk", "Pleun"]}, {"baan": "5", "a": ["Joris", "Iris"], "b": ["MJ", "Hannah L"]}]}, {"round": 4, "time": "14:44", "endtime": "14:56", "rest": ["MJ", "Hannah"], "courts": [{"baan": "4", "a": ["Loek", "Pleun"], "b": ["Maurits", "Hannah L"]}, {"baan": "5", "a": ["Joris", "Soof"], "b": ["Jouk", "Iris"]}]}, {"round": 5, "time": "14:56", "endtime": "15:08", "rest": ["Jouk", "Hannah L"], "courts": [{"baan": "4", "a": ["Loek", "Iris"], "b": ["Joris", "Pleun"]}, {"baan": "5", "a": ["Maurits", "Soof"], "b": ["MJ", "Hannah"]}]}, {"round": 6, "time": "15:08", "endtime": "15:20", "rest": ["Loek", "Hannah"], "courts": [{"baan": "4", "a": ["Joris", "Maurits"], "b": ["Pleun", "Soof"]}, {"baan": "5", "a": ["MJ", "Iris"], "b": ["Jouk", "Hannah L"]}]}, {"round": 7, "time": "15:20", "endtime": "15:32", "rest": ["Joris", "Hannah L"], "courts": [{"baan": "4", "a": ["Loek", "Soof"], "b": ["Hannah", "Iris"]}, {"baan": "5", "a": ["Maurits", "Pleun"], "b": ["MJ", "Jouk"]}]}, {"round": 8, "time": "15:32", "endtime": "15:44", "rest": ["Maurits", "Iris"], "courts": [{"baan": "4", "a": ["Loek", "Jouk"], "b": ["Hannah L", "Soof"]}, {"baan": "5", "a": ["Joris", "MJ"], "b": ["Hannah", "Pleun"]}]}]};
-const DATA11 = {"men": ["Loek", "Joris", "Maurits", "MJ", "Jouk"], "women": ["Hannah", "Hannah L", "Iris", "Pleun", "Soof", "Lune"], "rounds": [{"round": 1, "time": "14:08", "endtime": "14:20", "rest": ["Iris", "Joris", "Pleun"], "courts": [{"baan": "4", "a": ["Loek", "Lune"], "b": ["MJ", "Soof"]}, {"baan": "5", "a": ["Maurits", "Hannah"], "b": ["Jouk", "Hannah L"]}]}, {"round": 2, "time": "14:20", "endtime": "14:32", "rest": ["Loek", "MJ", "Hannah L"], "courts": [{"baan": "4", "a": ["Joris", "Hannah"], "b": ["Maurits", "Lune"]}, {"baan": "5", "a": ["Jouk", "Iris"], "b": ["Pleun", "Soof"]}]}, {"round": 3, "time": "14:32", "endtime": "14:44", "rest": ["Iris", "Soof", "MJ"], "courts": [{"baan": "4", "a": ["Loek", "Hannah"], "b": ["Maurits", "Pleun"]}, {"baan": "5", "a": ["Joris", "Hannah L"], "b": ["Jouk", "Lune"]}]}, {"round": 4, "time": "14:44", "endtime": "14:56", "rest": ["Hannah", "Hannah L", "Jouk"], "courts": [{"baan": "4", "a": ["Loek", "Iris"], "b": ["Joris", "Lune"]}, {"baan": "5", "a": ["Maurits", "Soof"], "b": ["MJ", "Pleun"]}]}, {"round": 5, "time": "14:56", "endtime": "15:08", "rest": ["Maurits", "Joris", "Pleun"], "courts": [{"baan": "4", "a": ["Loek", "Soof"], "b": ["Hannah L", "Iris"]}, {"baan": "5", "a": ["MJ", "Lune"], "b": ["Jouk", "Hannah"]}]}, {"round": 6, "time": "15:08", "endtime": "15:20", "rest": ["Hannah", "Lune", "Jouk"], "courts": [{"baan": "4", "a": ["Loek", "Pleun"], "b": ["Joris", "Soof"]}, {"baan": "5", "a": ["Maurits", "Hannah L"], "b": ["MJ", "Iris"]}]}, {"round": 7, "time": "15:20", "endtime": "15:32", "rest": ["Lune", "Hannah", "Loek"], "courts": [{"baan": "4", "a": ["Joris", "Pleun"], "b": ["MJ", "Hannah L"]}, {"baan": "5", "a": ["Maurits", "Iris"], "b": ["Jouk", "Soof"]}]}, {"round": 8, "time": "15:32", "endtime": "15:44", "rest": ["Lune", "Maurits", "Soof"], "courts": [{"baan": "4", "a": ["Loek", "Hannah L"], "b": ["Jouk", "Pleun"]}, {"baan": "5", "a": ["Joris", "Iris"], "b": ["MJ", "Hannah"]}]}]};
-const KEY = "padel_americano_v4";
+const KEY = "padel_americano_v5";
 const store = {
   get(){ try{ return JSON.parse(localStorage.getItem(KEY)||"null"); }catch(e){ return null; } },
-  set(v){ try{ localStorage.setItem(KEY, JSON.stringify(v)); }catch(e){} },
-  clear(){ try{ localStorage.removeItem(KEY); }catch(e){} }
+  set(v){ try{ localStorage.setItem(KEY, JSON.stringify(v)); }catch(e){} }
 };
 
 /* ---------- Firebase: scores live delen tussen alle spelers ---------- */
@@ -268,33 +269,33 @@ firebase.initializeApp(firebaseConfig);
 const stateRef = firebase.database().ref("state");
 
 const blank = d => d.rounds.map(r => r.courts.map(()=>({a:null,b:null})));
-function freshState(){
-  return { mode:10,
-    s:{ "10":blank(DATA10), "11":blank(DATA11) },
-    f:{ "10":{a:null,b:null}, "11":{a:null,b:null} } };
+function freshState(){ return { s: blank(DATA10), f: {a:null,b:null} }; }
+
+// oude datavorm (met mode 10/11) migreren naar de vaste 10-spelersvorm
+function migrate(raw){
+  if(!raw) return freshState();
+  if(raw.s && (raw.s["10"] || raw.s["11"])){
+    return { s: raw.s["10"] || blank(DATA10), f: (raw.f && raw.f["10"]) || {a:null,b:null} };
+  }
+  if(!raw.s) raw.s = blank(DATA10);
+  if(!raw.f) raw.f = {a:null,b:null};
+  return raw;
 }
-let ST = store.get();
-if(!ST || !ST.s || !ST.f){ ST = freshState(); }
-// backfill (e.g. first time 11 exists)
-if(!ST.s["11"]) ST.s["11"]=blank(DATA11);
-if(!ST.f["11"]) ST.f["11"]={a:null,b:null};
+
+let ST = migrate(store.get());
 
 // Live updates van andere spelers ontvangen
 stateRef.on("value", snap=>{
-  const remote = snap.val();
-  if(remote===null){ stateRef.set(ST); return; } // Firebase is nog leeg -> onze stand wordt de startstand
+  const remote = migrate(snap.val());
+  if(snap.val()===null){ stateRef.set(ST); return; } // Firebase is nog leeg -> onze stand wordt de startstand
   if(JSON.stringify(remote)===JSON.stringify(ST)) return; // dit is de bevestiging van onze eigen wijziging
   ST = remote;
-  applyMode();
+  render();
 });
 
-let D, scores, finale, MEN;
-function bind(){
-  D = ST.mode===11 ? DATA11 : DATA10;
-  scores = ST.s[ST.mode];
-  finale = ST.f[ST.mode];
-  MEN = new Set(D.men);
-}
+const D = DATA10;
+const MEN = new Set(D.men);
+let scores = ST.s, finale = ST.f;
 function persist(){ store.set(ST); stateRef.set(ST); }
 const genderTag = n => MEN.has(n) ? "M" : "V";
 
@@ -474,20 +475,37 @@ function buildSchema(){
   root.appendChild(md);
 }
 
-/* ---------- timeline ---------- */
+/* ---------- timeline (NL + EN) ---------- */
 function buildTimeline(){
-  const ul=document.getElementById("timeline");
-  ul.innerHTML=`<li><span class="tt">14:00–14:08</span><span>Uitleg + warming-up</span></li>`+
-    D.rounds.map(r=>`<li><span class="tt">${r.time}–${r.endtime}</span><span>Ronde ${r.round}</span></li>`).join("")+
-    `<li><span class="tt">15:45–16:00</span><span><b>Finale</b> — nr. 1 &amp; 3 tegen nr. 2 &amp; 4 (baan 4)</span></li>`;
+  const mk = rows => rows.map(r=>`<li><span class="tt">${r.t}</span><span>${r.l}</span></li>`).join("");
+  const rowsNL = [
+    {t:"14:00–14:08", l:"Uitleg + warming-up"},
+    ...D.rounds.map(r=>({t:`${r.time}–${r.endtime}`, l:`Ronde ${r.round}`})),
+    {t:"15:45–16:00", l:"<b>Finale</b> — nr. 1 &amp; 3 tegen nr. 2 &amp; 4 (baan 4)"}
+  ];
+  const rowsEN = [
+    {t:"14:00–14:08", l:"Explanation + warm-up"},
+    ...D.rounds.map(r=>({t:`${r.time}–${r.endtime}`, l:`Round ${r.round}`})),
+    {t:"15:45–16:00", l:"<b>Final</b> — no. 1 &amp; 3 vs no. 2 &amp; 4 (court 4)"}
+  ];
+  document.getElementById("timeline-nl").innerHTML = mk(rowsNL);
+  document.getElementById("timeline-en").innerHTML = mk(rowsEN);
 }
 
-/* ---------- mode / apply ---------- */
-function applyMode(){
-  bind();
-  document.getElementById("playersPill").textContent = ST.mode===11?"11":"10";
-  document.getElementById("setupSub").textContent = ST.mode===11?"11 spelers · Lune speelt mee · 3 rusten per ronde":"10 spelers · 2 rusten per ronde";
-  document.getElementById("luneToggle").checked = ST.mode===11;
+/* ---------- taalswitch (Uitleg-tab) ---------- */
+function setLang(l){
+  document.getElementById("info-nl").hidden = l!=="nl";
+  document.getElementById("info-en").hidden = l!=="en";
+  document.getElementById("langNL").classList.toggle("active", l==="nl");
+  document.getElementById("langEN").classList.toggle("active", l==="en");
+}
+document.getElementById("langNL").addEventListener("click", ()=>setLang("nl"));
+document.getElementById("langEN").addEventListener("click", ()=>setLang("en"));
+
+/* ---------- render ---------- */
+function render(){
+  scores = ST.s; finale = ST.f;
+  document.getElementById("playersPill").textContent = D.men.length + D.women.length;
   buildRounds(); buildSchema(); buildTimeline();
   D.rounds.forEach((r,ri)=>r.courts.forEach((c,ci)=>{updateSum(ri,ci);updateWin(ri,ci);}));
   renderBoard();
@@ -499,32 +517,6 @@ document.addEventListener("input",e=>{
   if(inp.dataset.f!==undefined) finInput(inp);
   else if(inp.dataset.r!==undefined) roundInput(inp);
 });
-document.addEventListener("click",e=>{
-  return; // steppers verwijderd — scores worden getypt
-});
-
-document.getElementById("luneToggle").addEventListener("change",e=>{
-  ST.mode = e.target.checked?11:10; persist(); applyMode();
-});
-
-/* reset: two-step, no confirm() (blocked in sandboxes) */
-let armed=false, armTimer=null;
-const resetBtn=document.getElementById("resetBtn");
-resetBtn.addEventListener("click",()=>{
-  if(!armed){
-    armed=true; resetBtn.classList.add("armed"); resetBtn.textContent="Zeker weten? Tik nogmaals";
-    armTimer=setTimeout(()=>{armed=false;resetBtn.classList.remove("armed");resetBtn.textContent="Scores wissen";},3500);
-    return;
-  }
-  clearTimeout(armTimer); armed=false; resetBtn.classList.remove("armed");
-  ST.s[ST.mode]=blank(D); ST.f[ST.mode]={a:null,b:null};
-  bind(); persist();
-  buildRounds();
-  D.rounds.forEach((r,ri)=>r.courts.forEach((c,ci)=>{updateSum(ri,ci);updateWin(ri,ci);}));
-  renderBoard();
-  resetBtn.textContent="Gewist ✓";
-  setTimeout(()=>{resetBtn.textContent="Scores wissen";},1500);
-});
 
 /* tabs */
 const tabs=[...document.querySelectorAll('.tab')];
@@ -534,7 +526,7 @@ tabs.forEach(tab=>tab.addEventListener("click",()=>{
   window.scrollTo({top:0});
 }));
 
-applyMode();
+render();
 </script>
 </body>
 </html>
