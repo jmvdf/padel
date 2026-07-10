@@ -91,6 +91,8 @@ section[hidden]{display:none}
 .score input::placeholder{color:#B7C4BF;font-weight:500}
 .score input::-webkit-outer-spin-button,.score input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .score input:focus{outline:none;border-color:var(--teal);background:#fff;box-shadow:0 0 0 3px rgba(21,154,140,.15)}
+@keyframes flashmax{0%{background:var(--coral-soft);border-color:var(--coral)}100%{background:#FBFCFB;border-color:var(--line)}}
+.score input.flash{animation:flashmax .5s ease-out}
 .team.win .score input{border-color:var(--court)}
 .vs{align-self:center;font-family:'Archivo';font-weight:800;font-size:12px;color:var(--muted)}
 .sumbar{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;font-size:11.5px;color:var(--muted)}
@@ -98,6 +100,11 @@ section[hidden]{display:none}
 .sumbar .tag.ok{background:#E4F5EC;color:var(--good)}
 .sumbar .tag.live{background:#E7F1EE;color:var(--teal)}
 .sumbar .tag.warn{background:var(--coral-soft);color:var(--coral)}
+.savebar{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px}
+.dirtytag{font-family:'JetBrains Mono';font-weight:700;font-size:10.5px;color:var(--coral);background:var(--coral-soft);padding:2px 8px;border-radius:999px}
+.savebtn{font-family:'Archivo';font-weight:800;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;border-radius:8px;padding:7px 14px;cursor:pointer;border:1.5px solid var(--line);background:#fff;color:var(--muted);transition:.15s}
+.savebtn.dirty{background:var(--coral);border-color:var(--coral);color:#fff}
+.savebtn:focus-visible{outline:3px solid var(--teal-soft);outline-offset:2px}
 
 /* standings */
 .board{background:var(--court);border-radius:18px;padding:8px;margin:14px 0;box-shadow:var(--shadow)}
@@ -268,35 +275,84 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const stateRef = firebase.database().ref("state");
 
+const D = DATA10;
+const MEN = new Set(D.men);
+
 const blank = d => d.rounds.map(r => r.courts.map(()=>({a:null,b:null})));
 function freshState(){ return { s: blank(DATA10), f: {a:null,b:null} }; }
 
-// oude datavorm (met mode 10/11) migreren naar de vaste 10-spelersvorm
+// Firebase verwijdert automatisch elk veld met waarde 'null' (dat is hoe RTDB werkt).
+// Onze scores staan vol met null (= nog niet gespeeld), dus zonder deze omzetting
+// slikt Firebase stilletjes hele rondes/potjes in zodra ze nog leeg zijn, en raakt
+// de datastructuur beschadigd. Daarom vervangen we null door een neutrale placeholder
+// vlak vóór het wegschrijven, en zetten 'm na het teruglezen weer om naar null.
+const NULLMARK = -1;
+function encodeForFirebase(v){
+  return JSON.parse(JSON.stringify(v, (k,val)=> val===null ? NULLMARK : val));
+}
+function decodeFromFirebase(v){
+  if(v===NULLMARK) return null;
+  if(Array.isArray(v)) return v.map(decodeFromFirebase);
+  if(v && typeof v==="object"){ const out={}; for(const k in v) out[k]=decodeFromFirebase(v[k]); return out; }
+  return v;
+}
+
+// Herstelt/normaliseert de scores naar de vaste vorm (alle rondes x alle banen),
+// ongeacht hoe onvolledig of scheef de binnenkomende data is (bv. door de bug hierboven,
+// of nog resten van een oudere versie van de app).
+function repairScores(sArr){
+  return D.rounds.map((r,ri)=> r.courts.map((c,ci)=>{
+    const cell = sArr && sArr[ri] && sArr[ri][ci];
+    return { a: (cell && cell.a!=null) ? cell.a : null, b: (cell && cell.b!=null) ? cell.b : null };
+  }));
+}
+function repairFinale(f){
+  return { a: (f && f.a!=null) ? f.a : null, b: (f && f.b!=null) ? f.b : null };
+}
+
+// oude datavorm (met mode 10/11) migreren naar de vaste 10-spelersvorm, en meteen
+// repareren naar een altijd-kloppende vorm
 function migrate(raw){
   if(!raw) return freshState();
   if(raw.s && (raw.s["10"] || raw.s["11"])){
-    return { s: raw.s["10"] || blank(DATA10), f: (raw.f && raw.f["10"]) || {a:null,b:null} };
+    return { s: repairScores(raw.s["10"]), f: repairFinale(raw.f && raw.f["10"]) };
   }
-  if(!raw.s) raw.s = blank(DATA10);
-  if(!raw.f) raw.f = {a:null,b:null};
-  return raw;
+  return { s: repairScores(raw.s), f: repairFinale(raw.f) };
 }
 
 let ST = migrate(store.get());
 
+let scores = ST.s, finale = ST.f;
+// 'pending' is wat je lokaal intypt maar nog niet hebt opgeslagen; 'scores'/'finale'
+// zijn de opgeslagen waarden die tellen voor de Stand en met iedereen gedeeld worden.
+let pending = JSON.parse(JSON.stringify(scores));
+let pendingFinale = { a: finale.a, b: finale.b };
+
+// Bij een update van een ander apparaat: alleen cellen overnemen die je zelf nog
+// niet aan het (nog niet opgeslagen) invullen bent, zodat je eigen invoer niet verdwijnt.
+function mergePendingOnRemote(remote){
+  D.rounds.forEach((r,ri)=>r.courts.forEach((c,ci)=>{
+    if(JSON.stringify(pending[ri][ci])===JSON.stringify(scores[ri][ci])){
+      pending[ri][ci] = { a: remote.s[ri][ci].a, b: remote.s[ri][ci].b };
+    }
+  }));
+  if(JSON.stringify(pendingFinale)===JSON.stringify(finale)){
+    pendingFinale = { a: remote.f.a, b: remote.f.b };
+  }
+}
+
 // Live updates van andere spelers ontvangen
 stateRef.on("value", snap=>{
-  const remote = migrate(snap.val());
-  if(snap.val()===null){ stateRef.set(ST); return; } // Firebase is nog leeg -> onze stand wordt de startstand
+  const val = snap.val();
+  if(val===null){ stateRef.set(encodeForFirebase(ST)); return; } // Firebase is nog leeg -> onze stand wordt de startstand
+  const remote = migrate(decodeFromFirebase(val));
   if(JSON.stringify(remote)===JSON.stringify(ST)) return; // dit is de bevestiging van onze eigen wijziging
+  mergePendingOnRemote(remote);
   ST = remote;
   render();
 });
 
-const D = DATA10;
-const MEN = new Set(D.men);
-let scores = ST.s, finale = ST.f;
-function persist(){ store.set(ST); stateRef.set(ST); }
+function persist(){ store.set(ST); stateRef.set(encodeForFirebase(ST)); }
 const genderTag = n => MEN.has(n) ? "M" : "V";
 
 /* ---------- rounds (scores) ---------- */
@@ -322,6 +378,10 @@ function buildRounds(){
           </div>
         </div>
         <div class="sumbar" data-sum="${ri}-${ci}"><span class="tag">tot max 24</span></div>
+        <div class="savebar">
+          <span class="dirtytag" data-dirty="${ri}-${ci}" hidden>Niet opgeslagen</span>
+          <button class="savebtn" type="button" data-r="${ri}" data-c="${ci}">Opslaan</button>
+        </div>
       </div>`;
     });
     card.innerHTML = `<header><div class="rnum">${r.round}</div>
@@ -330,33 +390,53 @@ function buildRounds(){
     root.appendChild(card);
   });
   D.rounds.forEach((r,ri)=>r.courts.forEach((c,ci)=>["a","b"].forEach(s=>{
-    const v=scores[ri][ci][s];
+    const v=pending[ri][ci][s];
     root.querySelector(`input[data-r="${ri}"][data-c="${ci}"][data-s="${s}"]`).value=(v==null?"":v);
   })));
   const fin=document.createElement("div"); fin.id="finaleBox"; root.appendChild(fin);
 }
 function clamp(n){ n=Math.round(n); if(isNaN(n)) return null; return Math.max(0,Math.min(24,n)); }
+function flashInput(inp){
+  inp.classList.remove("flash"); void inp.offsetWidth; // herstart de animatie
+  inp.classList.add("flash");
+  setTimeout(()=>inp.classList.remove("flash"), 500);
+}
 function roundInput(inp){
   const ri=+inp.dataset.r, ci=+inp.dataset.c, s=inp.dataset.s, o=s==="a"?"b":"a";
-  const ov=scores[ri][ci][o]||0;
-  let v=inp.value===""?null:clamp(parseInt(inp.value,10));
+  const ov=pending[ri][ci][o]||0;
+  const typed = inp.value===""?null:parseInt(inp.value,10);
+  let v = (typed===null||isNaN(typed)) ? null : clamp(typed);
   if(v!==null) v=Math.max(0,Math.min(v,24-ov));
-  scores[ri][ci][s]=v; inp.value=(v==null?"":v);
-  persist(); updateSum(ri,ci); updateWin(ri,ci); renderBoard();
+  const wasClamped = typed!==null && !isNaN(typed) && v!==typed;
+  pending[ri][ci][s]=v; inp.value=(v==null?"":v);
+  if(wasClamped) flashInput(inp);
+  updateSum(ri,ci); updateWin(ri,ci); updateSaveState(ri,ci);
 }
 function updateSum(ri,ci){
-  const cell=scores[ri][ci];
+  const cell=pending[ri][ci];
   const el=document.querySelector(`[data-sum="${ri}-${ci}"] .tag`); if(!el) return;
   if(cell.a==null&&cell.b==null){ el.className="tag"; el.textContent="tot max 24"; return; }
   const sum=(cell.a||0)+(cell.b||0); el.textContent=`${sum} / 24`;
   el.className="tag "+(sum>24?"warn":(sum===24?"ok":"live"));
 }
 function updateWin(ri,ci){
-  const cell=scores[ri][ci];
+  const cell=pending[ri][ci];
   document.querySelectorAll(`.team[data-r="${ri}"][data-c="${ci}"]`).forEach(t=>{
     const s=t.dataset.s, mine=cell[s], other=cell[s==="a"?"b":"a"];
     t.classList.toggle("win", mine!=null&&other!=null&&mine>other);
   });
+}
+function updateSaveState(ri,ci){
+  const btn=document.querySelector(`.savebtn[data-r="${ri}"][data-c="${ci}"]`); if(!btn) return;
+  const tag=document.querySelector(`.dirtytag[data-dirty="${ri}-${ci}"]`);
+  const dirty = JSON.stringify(pending[ri][ci]) !== JSON.stringify(scores[ri][ci]);
+  btn.classList.toggle("dirty", dirty);
+  btn.textContent = dirty ? "Opslaan" : "Opgeslagen ✓";
+  if(tag) tag.hidden = !dirty;
+}
+function saveMatch(ri,ci){
+  scores[ri][ci] = { a: pending[ri][ci].a, b: pending[ri][ci].b };
+  persist(); updateSaveState(ri,ci); renderBoard();
 }
 
 /* ---------- finale ---------- */
@@ -384,27 +464,51 @@ function renderFinale(){
         <div class="team" id="finB">${nm(teamB,2,4)}<div class="score"><input inputmode="numeric" pattern="[0-9]*" maxlength="2" data-f="b" aria-label="Punten nummer 2 en 4" placeholder="–"></div></div>
       </div>
       <div class="sumbar" id="finBar"><span class="tag">tot max 24</span></div><div id="finWin"></div>
+      <div class="savebar">
+        <span class="dirtytag" data-dirty="fin" hidden>Niet opgeslagen</span>
+        <button class="savebtn" type="button" data-fin="1">Opslaan</button>
+      </div>
     </div></div>`;
-  ["a","b"].forEach(s=>{ box.querySelector(`input[data-f="${s}"]`).value = finale[s]==null?"":finale[s]; });
-  paintFinale(teamA,teamB);
+  ["a","b"].forEach(s=>{ box.querySelector(`input[data-f="${s}"]`).value = pendingFinale[s]==null?"":pendingFinale[s]; });
+  paintFinale(teamA,teamB); updateFinSaveState();
 }
 function finInput(inp){
-  const s=inp.dataset.f, o=s==="a"?"b":"a", ov=finale[o]||0;
-  let v=inp.value===""?null:clamp(parseInt(inp.value,10));
+  const s=inp.dataset.f, o=s==="a"?"b":"a", ov=pendingFinale[o]||0;
+  const typed = inp.value===""?null:parseInt(inp.value,10);
+  let v = (typed===null||isNaN(typed)) ? null : clamp(typed);
   if(v!==null) v=Math.max(0,Math.min(v,24-ov));
-  finale[s]=v; inp.value=(v==null?"":v); persist();
+  const wasClamped = typed!==null && !isNaN(typed) && v!==typed;
+  pendingFinale[s]=v; inp.value=(v==null?"":v);
+  if(wasClamped) flashInput(inp);
+  updateFinSaveState();
   const order=rank().order; paintFinale([order[0],order[2]],[order[1],order[3]]);
 }
 function paintFinale(teamA,teamB){
   const bar=document.querySelector("#finBar .tag"); if(!bar) return;
   const A=document.getElementById("finA"),B=document.getElementById("finB"),win=document.getElementById("finWin");
-  if(finale.a==null&&finale.b==null){ bar.className="tag"; bar.textContent="tot max 24"; A.classList.remove("win");B.classList.remove("win");win.innerHTML=""; return; }
-  const sum=(finale.a||0)+(finale.b||0); bar.textContent=`${sum} / 24`; bar.className="tag "+(sum>24?"warn":(sum===24?"ok":"live"));
-  A.classList.toggle("win", finale.a!=null&&finale.b!=null&&finale.a>finale.b);
-  B.classList.toggle("win", finale.a!=null&&finale.b!=null&&finale.b>finale.a);
-  if(finale.a==null||finale.b==null){ win.innerHTML=""; return; }
-  if(finale.a===finale.b){ win.innerHTML=`<div class="champ tie">Gelijkspel — speel een beslissend punt</div>`; }
+  const pf=pendingFinale;
+  if(pf.a==null&&pf.b==null){ bar.className="tag"; bar.textContent="tot max 24"; A.classList.remove("win");B.classList.remove("win"); }
+  else{
+    const sum=(pf.a||0)+(pf.b||0); bar.textContent=`${sum} / 24`; bar.className="tag "+(sum>24?"warn":(sum===24?"ok":"live"));
+    A.classList.toggle("win", pf.a!=null&&pf.b!=null&&pf.a>pf.b);
+    B.classList.toggle("win", pf.a!=null&&pf.b!=null&&pf.b>pf.a);
+  }
+  // de winnaarsbanner toont pas het (opgeslagen) resultaat, niet de losse invoer
+  if(finale.a==null||finale.b==null){ win.innerHTML=""; }
+  else if(finale.a===finale.b){ win.innerHTML=`<div class="champ tie">Gelijkspel — speel een beslissend punt</div>`; }
   else{ const w=finale.a>finale.b?teamA:teamB; win.innerHTML=`<div class="champ">🏆 Toernooiwinnaars · ${w[0]} &amp; ${w[1]}</div>`; }
+}
+function updateFinSaveState(){
+  const btn=document.querySelector(`.savebtn[data-fin="1"]`); if(!btn) return;
+  const tag=document.querySelector(`.dirtytag[data-dirty="fin"]`);
+  const dirty = JSON.stringify(pendingFinale) !== JSON.stringify(finale);
+  btn.classList.toggle("dirty", dirty);
+  btn.textContent = dirty ? "Opslaan" : "Opgeslagen ✓";
+  if(tag) tag.hidden = !dirty;
+}
+function saveFinale(){
+  finale.a = pendingFinale.a; finale.b = pendingFinale.b;
+  persist(); updateFinSaveState(); renderBoard();
 }
 
 /* ---------- totals / rank ---------- */
@@ -507,7 +611,7 @@ function render(){
   scores = ST.s; finale = ST.f;
   document.getElementById("playersPill").textContent = D.men.length + D.women.length;
   buildRounds(); buildSchema(); buildTimeline();
-  D.rounds.forEach((r,ri)=>r.courts.forEach((c,ci)=>{updateSum(ri,ci);updateWin(ri,ci);}));
+  D.rounds.forEach((r,ri)=>r.courts.forEach((c,ci)=>{updateSum(ri,ci);updateWin(ri,ci);updateSaveState(ri,ci);}));
   renderBoard();
 }
 
@@ -516,6 +620,11 @@ document.addEventListener("input",e=>{
   const inp=e.target.closest("input"); if(!inp) return;
   if(inp.dataset.f!==undefined) finInput(inp);
   else if(inp.dataset.r!==undefined) roundInput(inp);
+});
+document.addEventListener("click",e=>{
+  const btn=e.target.closest(".savebtn"); if(!btn) return;
+  if(btn.dataset.fin!==undefined) saveFinale();
+  else saveMatch(+btn.dataset.r, +btn.dataset.c);
 });
 
 /* tabs */
