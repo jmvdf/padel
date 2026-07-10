@@ -242,6 +242,8 @@ footer{color:var(--muted);font-size:11.5px;text-align:center;padding:10px 0 26px
 
 <footer>Vul alleen de scores in — de stand rekent zichzelf uit.</footer>
 
+<script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-database-compat.js"></script>
 <script>
 const DATA10 = {"men": ["Loek", "Joris", "Maurits", "MJ", "Jouk"], "women": ["Hannah", "Hannah L", "Iris", "Pleun", "Soof"], "rounds": [{"round": 1, "time": "14:08", "endtime": "14:20", "rest": ["Loek", "Iris"], "courts": [{"baan": "4", "a": ["Joris", "Hannah L"], "b": ["Maurits", "Hannah"]}, {"baan": "5", "a": ["MJ", "Pleun"], "b": ["Jouk", "Soof"]}]}, {"round": 2, "time": "14:20", "endtime": "14:32", "rest": ["Joris", "Pleun"], "courts": [{"baan": "4", "a": ["Loek", "Hannah L"], "b": ["MJ", "Soof"]}, {"baan": "5", "a": ["Maurits", "Iris"], "b": ["Jouk", "Hannah"]}]}, {"round": 3, "time": "14:32", "endtime": "14:44", "rest": ["Maurits", "Soof"], "courts": [{"baan": "4", "a": ["Loek", "Hannah"], "b": ["Jouk", "Pleun"]}, {"baan": "5", "a": ["Joris", "Iris"], "b": ["MJ", "Hannah L"]}]}, {"round": 4, "time": "14:44", "endtime": "14:56", "rest": ["MJ", "Hannah"], "courts": [{"baan": "4", "a": ["Loek", "Pleun"], "b": ["Maurits", "Hannah L"]}, {"baan": "5", "a": ["Joris", "Soof"], "b": ["Jouk", "Iris"]}]}, {"round": 5, "time": "14:56", "endtime": "15:08", "rest": ["Jouk", "Hannah L"], "courts": [{"baan": "4", "a": ["Loek", "Iris"], "b": ["Joris", "Pleun"]}, {"baan": "5", "a": ["Maurits", "Soof"], "b": ["MJ", "Hannah"]}]}, {"round": 6, "time": "15:08", "endtime": "15:20", "rest": ["Loek", "Hannah"], "courts": [{"baan": "4", "a": ["Joris", "Maurits"], "b": ["Pleun", "Soof"]}, {"baan": "5", "a": ["MJ", "Iris"], "b": ["Jouk", "Hannah L"]}]}, {"round": 7, "time": "15:20", "endtime": "15:32", "rest": ["Joris", "Hannah L"], "courts": [{"baan": "4", "a": ["Loek", "Soof"], "b": ["Hannah", "Iris"]}, {"baan": "5", "a": ["Maurits", "Pleun"], "b": ["MJ", "Jouk"]}]}, {"round": 8, "time": "15:32", "endtime": "15:44", "rest": ["Maurits", "Iris"], "courts": [{"baan": "4", "a": ["Loek", "Jouk"], "b": ["Hannah L", "Soof"]}, {"baan": "5", "a": ["Joris", "MJ"], "b": ["Hannah", "Pleun"]}]}]};
 const DATA11 = {"men": ["Loek", "Joris", "Maurits", "MJ", "Jouk"], "women": ["Hannah", "Hannah L", "Iris", "Pleun", "Soof", "Lune"], "rounds": [{"round": 1, "time": "14:08", "endtime": "14:20", "rest": ["Iris", "Joris", "Pleun"], "courts": [{"baan": "4", "a": ["Loek", "Lune"], "b": ["MJ", "Soof"]}, {"baan": "5", "a": ["Maurits", "Hannah"], "b": ["Jouk", "Hannah L"]}]}, {"round": 2, "time": "14:20", "endtime": "14:32", "rest": ["Loek", "MJ", "Hannah L"], "courts": [{"baan": "4", "a": ["Joris", "Hannah"], "b": ["Maurits", "Lune"]}, {"baan": "5", "a": ["Jouk", "Iris"], "b": ["Pleun", "Soof"]}]}, {"round": 3, "time": "14:32", "endtime": "14:44", "rest": ["Iris", "Soof", "MJ"], "courts": [{"baan": "4", "a": ["Loek", "Hannah"], "b": ["Maurits", "Pleun"]}, {"baan": "5", "a": ["Joris", "Hannah L"], "b": ["Jouk", "Lune"]}]}, {"round": 4, "time": "14:44", "endtime": "14:56", "rest": ["Hannah", "Hannah L", "Jouk"], "courts": [{"baan": "4", "a": ["Loek", "Iris"], "b": ["Joris", "Lune"]}, {"baan": "5", "a": ["Maurits", "Soof"], "b": ["MJ", "Pleun"]}]}, {"round": 5, "time": "14:56", "endtime": "15:08", "rest": ["Maurits", "Joris", "Pleun"], "courts": [{"baan": "4", "a": ["Loek", "Soof"], "b": ["Hannah L", "Iris"]}, {"baan": "5", "a": ["MJ", "Lune"], "b": ["Jouk", "Hannah"]}]}, {"round": 6, "time": "15:08", "endtime": "15:20", "rest": ["Hannah", "Lune", "Jouk"], "courts": [{"baan": "4", "a": ["Loek", "Pleun"], "b": ["Joris", "Soof"]}, {"baan": "5", "a": ["Maurits", "Hannah L"], "b": ["MJ", "Iris"]}]}, {"round": 7, "time": "15:20", "endtime": "15:32", "rest": ["Lune", "Hannah", "Loek"], "courts": [{"baan": "4", "a": ["Joris", "Pleun"], "b": ["MJ", "Hannah L"]}, {"baan": "5", "a": ["Maurits", "Iris"], "b": ["Jouk", "Soof"]}]}, {"round": 8, "time": "15:32", "endtime": "15:44", "rest": ["Lune", "Maurits", "Soof"], "courts": [{"baan": "4", "a": ["Loek", "Hannah L"], "b": ["Jouk", "Pleun"]}, {"baan": "5", "a": ["Joris", "Iris"], "b": ["MJ", "Hannah"]}]}]};
@@ -251,6 +253,20 @@ const store = {
   set(v){ try{ localStorage.setItem(KEY, JSON.stringify(v)); }catch(e){} },
   clear(){ try{ localStorage.removeItem(KEY); }catch(e){} }
 };
+
+/* ---------- Firebase: scores live delen tussen alle spelers ---------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyCaayYDq7iG9UwX2qpuWA_x0aPZFzWZrpI",
+  authDomain: "padel-ndsm.firebaseapp.com",
+  databaseURL: "https://padel-ndsm-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "padel-ndsm",
+  storageBucket: "padel-ndsm.firebasestorage.app",
+  messagingSenderId: "910148375003",
+  appId: "1:910148375003:web:54b7d773e9baa030e517fe"
+};
+firebase.initializeApp(firebaseConfig);
+const stateRef = firebase.database().ref("state");
+
 const blank = d => d.rounds.map(r => r.courts.map(()=>({a:null,b:null})));
 function freshState(){
   return { mode:10,
@@ -263,6 +279,15 @@ if(!ST || !ST.s || !ST.f){ ST = freshState(); }
 if(!ST.s["11"]) ST.s["11"]=blank(DATA11);
 if(!ST.f["11"]) ST.f["11"]={a:null,b:null};
 
+// Live updates van andere spelers ontvangen
+stateRef.on("value", snap=>{
+  const remote = snap.val();
+  if(remote===null){ stateRef.set(ST); return; } // Firebase is nog leeg -> onze stand wordt de startstand
+  if(JSON.stringify(remote)===JSON.stringify(ST)) return; // dit is de bevestiging van onze eigen wijziging
+  ST = remote;
+  applyMode();
+});
+
 let D, scores, finale, MEN;
 function bind(){
   D = ST.mode===11 ? DATA11 : DATA10;
@@ -270,7 +295,7 @@ function bind(){
   finale = ST.f[ST.mode];
   MEN = new Set(D.men);
 }
-function persist(){ store.set(ST); }
+function persist(){ store.set(ST); stateRef.set(ST); }
 const genderTag = n => MEN.has(n) ? "M" : "V";
 
 /* ---------- rounds (scores) ---------- */
