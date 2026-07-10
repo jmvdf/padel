@@ -123,6 +123,8 @@ section[hidden]{display:none}
 .board .foot{color:#8FB2AC;font-size:11px;padding:6px 12px 8px;text-align:center}
 .btn{font-family:'Archivo';font-weight:800;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;border-radius:10px;padding:10px 14px;cursor:pointer;border:1.5px solid var(--line);background:#fff;color:var(--ink)}
 .btn:focus-visible{outline:3px solid var(--teal-soft);outline-offset:2px}
+.btn.armed{background:var(--coral);border-color:var(--coral);color:#fff}
+.wipebar{display:flex;justify-content:center;margin:22px 0 6px}
 
 /* WK-style schema */
 .md{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);margin:14px 0;overflow:hidden}
@@ -203,11 +205,13 @@ footer .credit{display:block;margin-top:4px;color:#8AA39C}
 <main class="wrap">
   <section id="p-scores" class="panel" role="tabpanel" aria-labelledby="tab-scores">
     <div id="roundsRoot"></div>
+    <div class="wipebar"><button class="btn" id="wipeBtn" type="button">Wis alle scores</button></div>
   </section>
 
   <section id="p-schema" class="panel" role="tabpanel" aria-labelledby="tab-schema" hidden></section>
 
   <section id="p-stand" class="panel" role="tabpanel" aria-labelledby="tab-stand" hidden>
+    <div class="champ" id="champRibbon" hidden></div>
     <div class="board"><h2><span class="dot"></span>Live stand</h2><div id="boardRows"></div>
       <div class="foot">Gerangschikt op <b>gemiddelde punten per gespeeld potje</b> · gelijke stand = gedeelde plaats</div></div>
   </section>
@@ -230,6 +234,17 @@ footer .credit{display:block;margin-top:4px;color:#8AA39C}
           <li>Vul de scores in bij <b>Scores</b>; het tabblad <b>Stand</b> telt automatisch op.</li>
         </ul>
       </div>
+      <div class="card"><h3>Algemene padelregels</h3>
+        <p>Los van onze Americano-puntentelling hierboven, dit zijn de gewone spelregels van padel (dus zonder games/sets):</p>
+        <ul>
+          <li>Padel speel je altijd in <b>dubbel</b> (2 tegen 2), op een ommuurde baan met glazen wanden en hekwerk.</li>
+          <li>De opslag is <b>onderhands</b>: je laat de bal eerst stuiteren en slaat 'm onder heuphoogte diagonaal het opslagvak van de tegenstander in — één servicepoging, geen tweede kans zoals bij tennis.</li>
+          <li>Na de opslag mag de bal, zolang hij niet vaker dan één keer op de grond heeft gestuiterd, ook van de achter- of zijwanden terugkaatsen voordat je 'm terugslaat.</li>
+          <li>Gaat de bal (nadat hij over het net is gegaan) buiten het hekwerk, door het gaas, of stuitert hij twee keer voordat je 'm terugslaat? Dan is het <b>uit</b>.</li>
+          <li>Je mag de bal uit de lucht slaan (volleren), behalve bij de opslag zelf — die moet altijd eerst stuiteren.</li>
+          <li>Het racket is de kenmerkende, geperforeerde padelbat zonder snaren; de bal lijkt op een tennisbal, met iets minder druk.</li>
+        </ul>
+      </div>
       <div class="card"><h3>Tijdschema</h3><ul class="tl" id="timeline-nl"></ul></div>
     </div>
 
@@ -243,6 +258,17 @@ footer .credit{display:block;margin-top:4px;color:#8AA39C}
           <li>The standings are based on <b>average points per game played</b> (total ÷ number of games played). That way it counts equally whether you play 5 or 6 games.</li>
           <li>After 8 rounds, that average determines the <b>final (15:45–16:00)</b>: number <b>1 &amp; 3</b> play together against number <b>2 &amp; 4</b>. The winners are the tournament champions.</li>
           <li>Enter the scores under <b>Scores</b>; the <b>Standings</b> tab adds it up automatically.</li>
+        </ul>
+      </div>
+      <div class="card"><h3>General padel rules</h3>
+        <p>Separate from our Americano point system above, these are the regular rules of padel (so no games/sets):</p>
+        <ul>
+          <li>Padel is always played in <b>doubles</b> (2 vs 2), on an enclosed court with glass walls and fencing.</li>
+          <li>The serve is <b>underhand</b>: you let the ball bounce first and hit it below hip height, diagonally into the opponent's service box — one serve attempt, no second try like in tennis.</li>
+          <li>After the serve, as long as the ball hasn't bounced more than once on the ground, it may also rebound off the back or side walls before you return it.</li>
+          <li>If the ball (after crossing the net) goes outside the fencing, through the mesh, or bounces twice before you return it, it's <b>out</b>.</li>
+          <li>You may volley the ball straight out of the air, except on the serve itself — that must always bounce first.</li>
+          <li>The racket is the signature perforated, stringless padel bat; the ball is similar to a tennis ball but with slightly less pressure.</li>
         </ul>
       </div>
       <div class="card"><h3>Schedule</h3><ul class="tl" id="timeline-en"></ul></div>
@@ -429,14 +455,16 @@ function updateWin(ri,ci){
 function updateSaveState(ri,ci){
   const btn=document.querySelector(`.savebtn[data-r="${ri}"][data-c="${ci}"]`); if(!btn) return;
   const tag=document.querySelector(`.dirtytag[data-dirty="${ri}-${ci}"]`);
-  const dirty = JSON.stringify(pending[ri][ci]) !== JSON.stringify(scores[ri][ci]);
+  const committed=scores[ri][ci];
+  const dirty = JSON.stringify(pending[ri][ci]) !== JSON.stringify(committed);
+  const hasSaved = !dirty && (committed.a!=null || committed.b!=null);
   btn.classList.toggle("dirty", dirty);
-  btn.textContent = dirty ? "Opslaan" : "Opgeslagen ✓";
+  btn.textContent = hasSaved ? "Opgeslagen ✓" : "Opslaan";
   if(tag) tag.hidden = !dirty;
 }
 function saveMatch(ri,ci){
   scores[ri][ci] = { a: pending[ri][ci].a, b: pending[ri][ci].b };
-  persist(); updateSaveState(ri,ci); renderBoard();
+  persist(); updateSaveState(ri,ci); renderBoard(); buildSchema();
 }
 
 /* ---------- finale ---------- */
@@ -502,8 +530,9 @@ function updateFinSaveState(){
   const btn=document.querySelector(`.savebtn[data-fin="1"]`); if(!btn) return;
   const tag=document.querySelector(`.dirtytag[data-dirty="fin"]`);
   const dirty = JSON.stringify(pendingFinale) !== JSON.stringify(finale);
+  const hasSaved = !dirty && (finale.a!=null || finale.b!=null);
   btn.classList.toggle("dirty", dirty);
-  btn.textContent = dirty ? "Opslaan" : "Opgeslagen ✓";
+  btn.textContent = hasSaved ? "Opgeslagen ✓" : "Opslaan";
   if(tag) tag.hidden = !dirty;
 }
 function saveFinale(){
@@ -536,22 +565,49 @@ function rank(){
   order.forEach(p=>{seen++; if(avg[p]!==prev){place=seen;prev=avg[p];} rk.push(place);});
   return {order,rk,avg,pts,games};
 }
+function allRoundsComplete(){
+  return scores.every(round=>round.every(cell=> cell.a!=null && cell.b!=null));
+}
+// De finale telt, zodra opgeslagen, mee als extra potje voor de 4 finalisten
+// (kan de volgorde in de Stand nog verschuiven) én levert een echte kampioen op.
+function finalStandings(){
+  const base = rank();
+  if(finale.a==null || finale.b==null) return { ...base, isFinal:false };
+  const teamA=[base.order[0],base.order[2]], teamB=[base.order[1],base.order[3]];
+  const pts={...base.pts}, games={...base.games};
+  teamA.forEach(p=>{ pts[p]+=finale.a; games[p]+=1; });
+  teamB.forEach(p=>{ pts[p]+=finale.b; games[p]+=1; });
+  const avg={}; [...D.men,...D.women].forEach(p=>avg[p]= games[p]>0 ? pts[p]/games[p] : 0);
+  const order=[...D.men,...D.women].sort((a,b)=> avg[b]-avg[a] || pts[b]-pts[a] || a.localeCompare(b));
+  let rk=[],prev=null,place=0,seen=0;
+  order.forEach(p=>{seen++; if(avg[p]!==prev){place=seen;prev=avg[p];} rk.push(place);});
+  const winner = finale.a===finale.b ? null : (finale.a>finale.b?teamA:teamB);
+  return {order,rk,avg,pts,games,isFinal:true,winner,tie:finale.a===finale.b,finalists:[...teamA,...teamB]};
+}
 function renderBoard(){
-  const {order,rk,avg,pts,games}=rank(); const {rest}=totals();
+  const fs = finalStandings();
+  const {order,rk,avg,pts,games}=fs; const {rest}=totals();
   const any=Object.values(games).some(v=>v>0);
   const box=document.getElementById("boardRows"); box.innerHTML="";
   order.forEach((p,i)=>{
     const row=document.createElement("div");
     row.className="row"+(any&&rk[i]===1?" lead":"");
     const a = games[p]>0 ? avg[p].toFixed(1) : "–";
+    const maxGames = (8-rest[p]) + (fs.isFinal && fs.finalists.includes(p) ? 1 : 0);
     row.innerHTML=`<div class="rk">${any?rk[i]:"·"}</div>
       <div class="who"><span class="g">${genderTag(p)}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p}</span></div>
-      <div class="pl">${pts[p]} pt · ${games[p]}/${8-rest[p]} pot</div><div class="pts">${a}</div>`;
+      <div class="pl">${pts[p]} pt · ${games[p]}/${maxGames} pot</div><div class="pts">${a}</div>`;
     box.appendChild(row);
   });
   const lead=document.getElementById("leadchip");
   if(any){ lead.hidden=false; document.getElementById("leadName").textContent=order[0]; document.getElementById("leadPts").textContent=avg[order[0]].toFixed(1); }
   else lead.hidden=true;
+  const ribbon=document.getElementById("champRibbon");
+  if(ribbon){
+    if(fs.isFinal && fs.tie){ ribbon.className="champ tie"; ribbon.textContent="Gelijkspel in de finale — speel een beslissend punt"; ribbon.hidden=false; }
+    else if(fs.isFinal && fs.winner){ ribbon.className="champ"; ribbon.innerHTML=`🏆 Kampioen · ${fs.winner[0]} &amp; ${fs.winner[1]}`; ribbon.hidden=false; }
+    else ribbon.hidden=true;
+  }
   renderFinale();
 }
 
@@ -571,11 +627,21 @@ function buildSchema(){
     root.appendChild(md);
   });
   const md=document.createElement("div"); md.className="md fin";
-  md.innerHTML=`<div class="mh"><span class="n">Finale</span><span class="tm">15:45–16:00</span></div>
-    <div class="fx"><div class="t1"><div class="nm"><span class="seed">1</span>&amp;<span class="seed">3</span> van de stand</div></div>
-      <div class="ctr"><span class="baan">Baan 4</span><span class="vs">vs</span></div>
-      <div class="t2"><div class="nm"><span class="seed">2</span>&amp;<span class="seed">4</span> van de stand</div></div></div>
-    <div class="fnote">De vier hoogst geëindigde spelers spelen de beslissende finale. De winnaars zijn de toernooiwinnaars — vul de finalescore in bij <b>Scores</b>.</div>`;
+  if(allRoundsComplete()){
+    const order=rank().order;
+    const teamA=[order[0],order[2]], teamB=[order[1],order[3]];
+    md.innerHTML=`<div class="mh"><span class="n">Finale</span><span class="tm">15:45–16:00</span></div>
+      <div class="fx"><div class="t1"><div class="nm"><span class="seed">1</span>${teamA[0]} &amp; <span class="seed">3</span>${teamA[1]}</div></div>
+        <div class="ctr"><span class="baan">Baan 4</span><span class="vs">vs</span></div>
+        <div class="t2"><div class="nm"><span class="seed">2</span>${teamB[0]} &amp; <span class="seed">4</span>${teamB[1]}</div></div></div>
+      <div class="fnote">Alle rondes zijn ingevuld — dit zijn de definitieve finalisten. Vul de finalescore in bij <b>Scores</b>.</div>`;
+  } else {
+    md.innerHTML=`<div class="mh"><span class="n">Finale</span><span class="tm">15:45–16:00</span></div>
+      <div class="fx"><div class="t1"><div class="nm"><span class="seed">1</span>&amp;<span class="seed">3</span> van de stand</div></div>
+        <div class="ctr"><span class="baan">Baan 4</span><span class="vs">vs</span></div>
+        <div class="t2"><div class="nm"><span class="seed">2</span>&amp;<span class="seed">4</span> van de stand</div></div></div>
+      <div class="fnote">De vier hoogst geëindigde spelers spelen de beslissende finale. Zodra alle 8 rondes zijn ingevuld, verschijnen hier de echte namen.</div>`;
+  }
   root.appendChild(md);
 }
 
@@ -625,6 +691,26 @@ document.addEventListener("click",e=>{
   const btn=e.target.closest(".savebtn"); if(!btn) return;
   if(btn.dataset.fin!==undefined) saveFinale();
   else saveMatch(+btn.dataset.r, +btn.dataset.c);
+});
+
+/* wis alle scores (twee keer tikken ter bevestiging) */
+let wipeArmed=false, wipeTimer=null;
+const wipeBtn=document.getElementById("wipeBtn");
+wipeBtn.addEventListener("click", ()=>{
+  if(!wipeArmed){
+    wipeArmed=true; wipeBtn.classList.add("armed"); wipeBtn.textContent="Zeker weten? Tik nogmaals";
+    wipeTimer=setTimeout(()=>{wipeArmed=false;wipeBtn.classList.remove("armed");wipeBtn.textContent="Wis alle scores";},3500);
+    return;
+  }
+  clearTimeout(wipeTimer); wipeArmed=false; wipeBtn.classList.remove("armed");
+  ST.s = blank(D); ST.f = {a:null,b:null};
+  scores = ST.s; finale = ST.f;
+  pending = JSON.parse(JSON.stringify(scores));
+  pendingFinale = {a:null,b:null};
+  persist();
+  render();
+  wipeBtn.textContent="Gewist ✓";
+  setTimeout(()=>{wipeBtn.textContent="Wis alle scores";},1500);
 });
 
 /* tabs */
