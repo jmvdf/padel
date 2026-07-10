@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mixed Americano · Banen 4 & 5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --court:#0C3B37; --court2:#123F3A; --teal:#159A8C; --teal-soft:#7FCFC3;
+  --ball:#D8EC3A; --page:#EFF3EE; --card:#FFFFFF; --ink:#0E2320; --muted:#5E6E6A;
+  --line:#D9E2DC; --coral:#E8734A; --coral-soft:#FBE4DB; --good:#1E9E6A;
+  --shadow:0 1px 2px rgba(12,59,55,.06),0 8px 24px rgba(12,59,55,.06);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--page);color:var(--ink);
+  font-family:'Inter',system-ui,sans-serif;line-height:1.5;
+  padding-bottom:env(safe-area-inset-bottom)}
+h1,h2,h3{font-family:'Archivo',sans-serif;margin:0;letter-spacing:-.01em}
+.mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+.wrap{max-width:1160px;margin:0 auto;padding:0 18px}
+
+.top{position:sticky;top:0;z-index:20;background:var(--court);color:#EAF3F0;
+  border-bottom:1px solid rgba(255,255,255,.08)}
+.top .wrap{display:flex;align-items:center;gap:12px;padding:10px 16px}
+.brand{display:flex;align-items:baseline;gap:8px;font-family:'Archivo';font-weight:900;
+  text-transform:uppercase;letter-spacing:.02em;font-size:15px}
+.brand .dot{width:9px;height:9px;border-radius:50%;background:var(--ball);
+  align-self:center;box-shadow:0 0 0 3px rgba(216,236,58,.25)}
+.leadchip{margin-left:auto;display:flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+  padding:5px 10px;border-radius:999px;font-size:12px;color:#CFE6E0;white-space:nowrap}
+.leadchip b{color:var(--ball);font-family:'JetBrains Mono';font-weight:700}
+.leadchip .nm{color:#fff;font-weight:600;max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.hero{background:linear-gradient(180deg,var(--court) 0%,var(--court2) 100%);
+  color:#EAF3F0;position:relative;overflow:hidden}
+.hero:after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(90deg,transparent 49.6%,rgba(127,207,195,.30) 49.6%,rgba(127,207,195,.30) 50.4%,transparent 50.4%),
+   linear-gradient(0deg,transparent 0,transparent calc(100% - 74px),rgba(127,207,195,.28) calc(100% - 74px),rgba(127,207,195,.28) calc(100% - 73px),transparent calc(100% - 73px))}
+.hero .wrap{position:relative;z-index:1;padding:18px 18px 20px}
+.eyebrow{font-family:'Archivo';font-weight:700;text-transform:uppercase;letter-spacing:.22em;font-size:11px;color:var(--teal-soft)}
+.hero h1{font-size:clamp(26px,6vw,44px);font-weight:900;line-height:.98;margin:6px 0 0;text-transform:uppercase}
+.hero h1 span{color:var(--ball)}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);padding:6px 11px;border-radius:999px;color:#D6E9E4}
+.pill .k{color:var(--teal-soft)}
+
+.tabs{position:sticky;top:53px;z-index:15;background:var(--page);
+  padding:10px 18px 6px;display:flex;gap:5px;max-width:1160px;margin:0 auto}
+.tab{flex:1;text-align:center;font-family:'Archivo';font-weight:800;font-size:12.5px;
+  text-transform:uppercase;letter-spacing:.02em;color:var(--muted);
+  background:transparent;border:1.5px solid var(--line);border-radius:11px;padding:10px 4px;cursor:pointer;transition:.15s}
+.tab[aria-selected="true"]{background:var(--court);color:#fff;border-color:var(--court)}
+.tab:focus-visible{outline:3px solid var(--teal-soft);outline-offset:2px}
+
+section[hidden]{display:none}
+.panel{padding:6px 0 40px}
+#roundsRoot,#p-schema{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;align-items:start}
+#finaleBox,#p-schema .md.fin{grid-column:1/-1}
+#p-scores>.setup{margin-bottom:2px}
+/* keep single-column panels readable-width */
+#p-stand,#p-info{max-width:660px;margin:0 auto}
+
+/* setup / lune toggle */
+.setup{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  box-shadow:var(--shadow);padding:12px 14px;margin:14px 0 6px;display:flex;align-items:center;gap:12px}
+.setup .txt{flex:1;min-width:0}
+.setup .txt b{font-family:'Archivo';font-weight:800;font-size:13px}
+.setup .txt small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+.switch{position:relative;width:52px;height:30px;flex:none}
+.switch input{opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+.switch .tr{position:absolute;inset:0;background:#CBD6D1;border-radius:999px;transition:.18s;pointer-events:none}
+.switch .kn{position:absolute;top:3px;left:3px;width:24px;height:24px;background:#fff;border-radius:50%;
+  transition:.18s;box-shadow:0 1px 3px rgba(0,0,0,.25);pointer-events:none}
+.switch input:checked~.tr{background:var(--teal)}
+.switch input:checked~.kn{transform:translateX(22px)}
+.switch input:focus-visible~.tr{outline:3px solid var(--teal-soft);outline-offset:2px}
+
+.round{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);margin:0;overflow:hidden}
+.round>header{display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--line)}
+.rnum{font-family:'Archivo';font-weight:900;font-size:26px;line-height:1;color:var(--court);
+  background:var(--ball);border-radius:10px;padding:7px 10px 6px;min-width:44px;text-align:center}
+.rmeta{display:flex;flex-direction:column}
+.rmeta .t{font-family:'JetBrains Mono';font-weight:700;font-size:15px}
+.rmeta .l{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.rest{margin-left:auto;text-align:right;font-size:12px;color:var(--muted);max-width:44%}
+.rest b{display:block;color:var(--ink);font-weight:600;font-size:12.5px;line-height:1.3}
+
+.court{padding:10px 14px}
+.court+.court{border-top:1px dashed var(--line)}
+.cflag{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.cflag .b{font-family:'Archivo';font-weight:800;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#fff;background:var(--teal);padding:3px 8px;border-radius:6px}
+.cflag .line{flex:1;height:1px;background:var(--line)}
+
+.match{display:grid;grid-template-columns:1fr auto 1fr;align-items:stretch;gap:8px}
+.team{border:1.5px solid var(--line);border-radius:12px;padding:9px 10px;display:flex;flex-direction:column;gap:8px;transition:.15s;background:#fff}
+.team.win{border-color:var(--court);background:#F4FAF8}
+.tname{font-weight:600;font-size:13.5px;line-height:1.25}
+.score{display:flex;justify-content:center}
+.score input{width:100%;max-width:96px;height:44px;text-align:center;font-family:'JetBrains Mono';font-weight:700;font-size:22px;color:var(--ink);border:1.5px solid var(--line);border-radius:10px;background:#FBFCFB;padding:0;-moz-appearance:textfield;transition:.12s}
+.score input::placeholder{color:#B7C4BF;font-weight:500}
+.score input::-webkit-outer-spin-button,.score input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.score input:focus{outline:none;border-color:var(--teal);background:#fff;box-shadow:0 0 0 3px rgba(21,154,140,.15)}
+.team.win .score input{border-color:var(--court)}
+.vs{align-self:center;font-family:'Archivo';font-weight:800;font-size:12px;color:var(--muted)}
+.sumbar{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;font-size:11.5px;color:var(--muted)}
+.sumbar .tag{font-family:'JetBrains Mono';font-weight:700;padding:2px 8px;border-radius:999px;background:#EFF3F0;color:var(--muted)}
+.sumbar .tag.ok{background:#E4F5EC;color:var(--good)}
+.sumbar .tag.live{background:#E7F1EE;color:var(--teal)}
+.sumbar .tag.warn{background:var(--coral-soft);color:var(--coral)}
+
+/* standings */
+.board{background:var(--court);border-radius:18px;padding:8px;margin:14px 0;box-shadow:var(--shadow)}
+.board h2{color:#EAF3F0;font-size:13px;text-transform:uppercase;letter-spacing:.16em;font-weight:800;padding:10px 12px 4px;display:flex;align-items:center;gap:8px}
+.board h2 .dot{width:8px;height:8px;border-radius:50%;background:var(--ball)}
+.row{display:grid;grid-template-columns:34px 1fr auto auto;align-items:center;gap:10px;padding:11px 12px;border-radius:12px;color:#DCEAE6}
+.row+.row{margin-top:2px}
+.row .rk{font-family:'Archivo';font-weight:900;font-size:17px;color:var(--teal-soft);text-align:center}
+.row .who{font-weight:600;font-size:15px;color:#fff;display:flex;align-items:center;gap:8px;min-width:0}
+.row .who .g{font-size:10px;font-weight:700;color:#9FC7C0;border:1px solid rgba(255,255,255,.16);border-radius:4px;padding:1px 4px}
+.row .pl{font-size:11px;color:#8FB2AC;font-family:'JetBrains Mono'}
+.row .pts{font-family:'JetBrains Mono';font-weight:700;font-size:20px;color:#EAF3F0;text-align:right}
+.row.lead{background:linear-gradient(90deg,rgba(216,236,58,.16),rgba(216,236,58,.04));box-shadow:inset 0 0 0 1px rgba(216,236,58,.5)}
+.row.lead .rk{color:var(--ball)}
+.row.lead .pts{color:var(--ball)}
+.board .foot{color:#8FB2AC;font-size:11px;padding:6px 12px 8px;text-align:center}
+.actions{display:flex;gap:8px;margin-top:6px}
+.btn{font-family:'Archivo';font-weight:800;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;border-radius:10px;padding:10px 14px;cursor:pointer;border:1.5px solid var(--line);background:#fff;color:var(--ink)}
+.btn.ghost{color:var(--muted)}
+.btn.armed{background:var(--coral);border-color:var(--coral);color:#fff}
+.btn:focus-visible{outline:3px solid var(--teal-soft);outline-offset:2px}
+
+/* WK-style schema */
+.md{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);margin:14px 0;overflow:hidden}
+.md>.mh{display:flex;align-items:center;gap:10px;background:var(--court);color:#fff;padding:9px 14px}
+.md>.mh .n{font-family:'Archivo';font-weight:900;font-size:13px;text-transform:uppercase;letter-spacing:.05em}
+.md>.mh .tm{margin-left:auto;font-family:'JetBrains Mono';font-weight:700;font-size:13px;color:var(--ball)}
+.fx{display:grid;grid-template-columns:1fr 62px 1fr;align-items:center;gap:6px;padding:11px 12px}
+.fx+.fx{border-top:1px solid var(--line)}
+.fx .t1{text-align:right}
+.fx .t2{text-align:left}
+.fx .nm{font-weight:600;font-size:13.5px;line-height:1.2}
+.fx .ctr{display:flex;flex-direction:column;align-items:center;gap:3px}
+.fx .baan{font-family:'Archivo';font-weight:800;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);background:#E7F1EE;border-radius:5px;padding:1px 6px}
+.fx .vs{font-family:'Archivo';font-weight:800;font-size:11px;color:var(--muted)}
+.md .rst{background:#F7FAF8;border-top:1px solid var(--line);padding:8px 12px;font-size:11.5px;color:var(--muted);text-align:center}
+.md .rst b{color:var(--ink);font-weight:600}
+.md.fin>.mh{background:linear-gradient(90deg,var(--court),#155049)}
+.md.fin>.mh .n{color:var(--ball)}
+.seed{display:inline-block;min-width:16px;height:16px;line-height:16px;text-align:center;font-family:'JetBrains Mono';font-weight:700;font-size:10px;border-radius:4px;background:var(--court);color:var(--ball);margin:0 3px}
+.fnote{padding:10px 12px;font-size:12.5px;color:var(--muted)}
+
+/* info */
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px;margin:14px 0}
+.card h3{font-size:15px;text-transform:uppercase;letter-spacing:.08em;color:var(--court);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.card h3:before{content:"";width:16px;height:3px;background:var(--ball);border-radius:2px}
+.card p{margin:0 0 6px;font-size:14px;color:#25403B}
+.card ul{margin:6px 0 0;padding-left:18px}
+.card li{font-size:14px;margin:5px 0;color:#25403B}
+.tl{list-style:none;padding:0;margin:8px 0 0}
+.tl li{display:flex;gap:12px;padding:7px 0;border-top:1px solid var(--line);font-size:14px}
+.tl li:first-child{border-top:none}
+.tl .tt{font-family:'JetBrains Mono';font-weight:700;color:var(--court);min-width:104px}
+
+/* finale card in scores tab */
+.round.finale{border:1.5px solid var(--court);box-shadow:0 1px 2px rgba(12,59,55,.08),0 10px 30px rgba(12,59,55,.12)}
+.round.finale>header{background:var(--court);border-bottom:none}
+.round.finale .rmeta .t{color:#fff}.round.finale .rmeta .l{color:var(--teal-soft)}
+.round.finale .rest{color:#9FC7C0}.round.finale .rest b{color:#fff}
+.rnum.fin{background:var(--ball);color:var(--court)}
+.cflag .b.gold{background:var(--court);color:var(--ball)}
+.tname .seed{margin-right:2px}
+.fplaceholder{margin:4px 0;font-size:13.5px;color:var(--muted)}
+.champ{margin-top:10px;text-align:center;font-family:'Archivo';font-weight:800;font-size:14px;color:var(--court);background:linear-gradient(90deg,rgba(216,236,58,.35),rgba(216,236,58,.12));border:1px solid rgba(12,59,55,.15);border-radius:10px;padding:9px 10px}
+.champ.tie{background:var(--coral-soft);color:var(--coral);border-color:rgba(232,115,74,.3)}
+footer{color:var(--muted);font-size:11.5px;text-align:center;padding:10px 0 26px}
+@media (max-width:420px){.rmeta .l{display:none}.team{padding:8px}.tname{font-size:12.5px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="top"><div class="wrap">
+  <div class="brand"><span class="dot"></span>Americano</div>
+  <div class="leadchip" id="leadchip" hidden>Leider <span class="nm" id="leadName">—</span> <b id="leadPts">0</b></div>
+</div></div>
+
+<header class="hero"><div class="wrap">
+  <div class="eyebrow">Padeltoernooi · Banen 4 &amp; 5</div>
+  <h1>Mixed <span>Americano</span></h1>
+  <div class="meta">
+    <span class="pill"><span class="k">Tijd</span> 14:00–16:00</span>
+    <span class="pill"><span class="k">Spelers</span> <span id="playersPill">10</span></span>
+    <span class="pill"><span class="k">Rondes</span> 8 + finale</span>
+    <span class="pill"><span class="k">Per potje</span> max 24</span>
+  </div>
+</div></header>
+
+<nav class="tabs" role="tablist" aria-label="Weergave">
+  <button class="tab" role="tab" id="tab-scores" aria-controls="p-scores" aria-selected="true">Scores</button>
+  <button class="tab" role="tab" id="tab-schema" aria-controls="p-schema" aria-selected="false">Schema</button>
+  <button class="tab" role="tab" id="tab-stand" aria-controls="p-stand" aria-selected="false">Stand</button>
+  <button class="tab" role="tab" id="tab-info" aria-controls="p-info" aria-selected="false">Uitleg</button>
+</nav>
+
+<main class="wrap">
+  <section id="p-scores" class="panel" role="tabpanel" aria-labelledby="tab-scores">
+    <div class="setup">
+      <div class="txt"><b>Speelt Lune mee?</b><small id="setupSub">10 spelers · 2 rusten per ronde</small></div>
+      <label class="switch"><input type="checkbox" id="luneToggle" aria-label="Lune speelt mee"><span class="tr"></span><span class="kn"></span></label>
+    </div>
+    <div id="roundsRoot"></div>
+  </section>
+
+  <section id="p-schema" class="panel" role="tabpanel" aria-labelledby="tab-schema" hidden></section>
+
+  <section id="p-stand" class="panel" role="tabpanel" aria-labelledby="tab-stand" hidden>
+    <div class="board"><h2><span class="dot"></span>Live stand</h2><div id="boardRows"></div>
+      <div class="foot">Gerangschikt op <b>gemiddelde punten per gespeeld potje</b> · gelijke stand = gedeelde plaats</div></div>
+    <div class="actions"><button class="btn ghost" id="resetBtn">Scores wissen</button></div>
+  </section>
+
+  <section id="p-info" class="panel" role="tabpanel" aria-labelledby="tab-info" hidden>
+    <div class="card"><h3>Zo werkt het</h3>
+      <p>Elke ronde speel je met een nieuwe partner tegen een ander koppel. Je speelt in tweetallen, maar telt punten voor jezelf.</p>
+      <ul>
+        <li>Een potje gaat tot <b>maximaal 24 punten samen</b> (24 rally's). Je stopt bij 24 óf als de 12 minuten om zijn — dus 4–10 of 4–20 kan, samen nooit méér dan 24.</li>
+        <li>Eindigt het bijv. 14–10, dan krijgen <b>béide</b> spelers van het winnende team 14 punten en béide verliezers 10.</li>
+        <li>Elk duo speelt maar één keer samen; elke ronde nieuwe combinaties.</li>
+        <li>De stand gaat op <b>gemiddelde punten per potje</b> (totaal ÷ aantal gespeelde potjes). Zo telt het even zwaar of je er 5 of 6 speelt.</li>
+        <li>Na 8 rondes bepaalt dat gemiddelde de <b>finale (15:45–16:00)</b>: nummer <b>1 &amp; 3</b> spelen samen tegen nummer <b>2 &amp; 4</b>. De winnaars zijn de toernooiwinnaars.</li>
+        <li>Vul de scores in bij <b>Scores</b>; het tabblad <b>Stand</b> telt automatisch op.</li>
+      </ul>
+    </div>
+    <div class="card"><h3>Tijdschema</h3><ul class="tl" id="timeline"></ul></div>
+  </section>
+</main>
+
+<footer>Vul alleen de scores in — de stand rekent zichzelf uit.</footer>
+
+<script>
+const DATA10 = {"men": ["Loek", "Joris", "Maurits", "MJ", "Jouk"], "women": ["Hannah", "Hannah L", "Iris", "Pleun", "Soof"], "rounds": [{"round": 1, "time": "14:08", "endtime": "14:20", "rest": ["Loek", "Iris"], "courts": [{"baan": "4", "a": ["Joris", "Hannah L"], "b": ["Maurits", "Hannah"]}, {"baan": "5", "a": ["MJ", "Pleun"], "b": ["Jouk", "Soof"]}]}, {"round": 2, "time": "14:20", "endtime": "14:32", "rest": ["Joris", "Pleun"], "courts": [{"baan": "4", "a": ["Loek", "Hannah L"], "b": ["MJ", "Soof"]}, {"baan": "5", "a": ["Maurits", "Iris"], "b": ["Jouk", "Hannah"]}]}, {"round": 3, "time": "14:32", "endtime": "14:44", "rest": ["Maurits", "Soof"], "courts": [{"baan": "4", "a": ["Loek", "Hannah"], "b": ["Jouk", "Pleun"]}, {"baan": "5", "a": ["Joris", "Iris"], "b": ["MJ", "Hannah L"]}]}, {"round": 4, "time": "14:44", "endtime": "14:56", "rest": ["MJ", "Hannah"], "courts": [{"baan": "4", "a": ["Loek", "Pleun"], "b": ["Maurits", "Hannah L"]}, {"baan": "5", "a": ["Joris", "Soof"], "b": ["Jouk", "Iris"]}]}, {"round": 5, "time": "14:56", "endtime": "15:08", "rest": ["Jouk", "Hannah L"], "courts": [{"baan": "4", "a": ["Loek", "Iris"], "b": ["Joris", "Pleun"]}, {"baan": "5", "a": ["Maurits", "Soof"], "b": ["MJ", "Hannah"]}]}, {"round": 6, "time": "15:08", "endtime": "15:20", "rest": ["Loek", "Hannah"], "courts": [{"baan": "4", "a": ["Joris", "Maurits"], "b": ["Pleun", "Soof"]}, {"baan": "5", "a": ["MJ", "Iris"], "b": ["Jouk", "Hannah L"]}]}, {"round": 7, "time": "15:20", "endtime": "15:32", "rest": ["Joris", "Hannah L"], "courts": [{"baan": "4", "a": ["Loek", "Soof"], "b": ["Hannah", "Iris"]}, {"baan": "5", "a": ["Maurits", "Pleun"], "b": ["MJ", "Jouk"]}]}, {"round": 8, "time": "15:32", "endtime": "15:44", "rest": ["Maurits", "Iris"], "courts": [{"baan": "4", "a": ["Loek", "Jouk"], "b": ["Hannah L", "Soof"]}, {"baan": "5", "a": ["Joris", "MJ"], "b": ["Hannah", "Pleun"]}]}]};
+const DATA11 = {"men": ["Loek", "Joris", "Maurits", "MJ", "Jouk"], "women": ["Hannah", "Hannah L", "Iris", "Pleun", "Soof", "Lune"], "rounds": [{"round": 1, "time": "14:08", "endtime": "14:20", "rest": ["Iris", "Joris", "Pleun"], "courts": [{"baan": "4", "a": ["Loek", "Lune"], "b": ["MJ", "Soof"]}, {"baan": "5", "a": ["Maurits", "Hannah"], "b": ["Jouk", "Hannah L"]}]}, {"round": 2, "time": "14:20", "endtime": "14:32", "rest": ["Loek", "MJ", "Hannah L"], "courts": [{"baan": "4", "a": ["Joris", "Hannah"], "b": ["Maurits", "Lune"]}, {"baan": "5", "a": ["Jouk", "Iris"], "b": ["Pleun", "Soof"]}]}, {"round": 3, "time": "14:32", "endtime": "14:44", "rest": ["Iris", "Soof", "MJ"], "courts": [{"baan": "4", "a": ["Loek", "Hannah"], "b": ["Maurits", "Pleun"]}, {"baan": "5", "a": ["Joris", "Hannah L"], "b": ["Jouk", "Lune"]}]}, {"round": 4, "time": "14:44", "endtime": "14:56", "rest": ["Hannah", "Hannah L", "Jouk"], "courts": [{"baan": "4", "a": ["Loek", "Iris"], "b": ["Joris", "Lune"]}, {"baan": "5", "a": ["Maurits", "Soof"], "b": ["MJ", "Pleun"]}]}, {"round": 5, "time": "14:56", "endtime": "15:08", "rest": ["Maurits", "Joris", "Pleun"], "courts": [{"baan": "4", "a": ["Loek", "Soof"], "b": ["Hannah L", "Iris"]}, {"baan": "5", "a": ["MJ", "Lune"], "b": ["Jouk", "Hannah"]}]}, {"round": 6, "time": "15:08", "endtime": "15:20", "rest": ["Hannah", "Lune", "Jouk"], "courts": [{"baan": "4", "a": ["Loek", "Pleun"], "b": ["Joris", "Soof"]}, {"baan": "5", "a": ["Maurits", "Hannah L"], "b": ["MJ", "Iris"]}]}, {"round": 7, "time": "15:20", "endtime": "15:32", "rest": ["Lune", "Hannah", "Loek"], "courts": [{"baan": "4", "a": ["Joris", "Pleun"], "b": ["MJ", "Hannah L"]}, {"baan": "5", "a": ["Maurits", "Iris"], "b": ["Jouk", "Soof"]}]}, {"round": 8, "time": "15:32", "endtime": "15:44", "rest": ["Lune", "Maurits", "Soof"], "courts": [{"baan": "4", "a": ["Loek", "Hannah L"], "b": ["Jouk", "Pleun"]}, {"baan": "5", "a": ["Joris", "Iris"], "b": ["MJ", "Hannah"]}]}]};
+const KEY = "padel_americano_v4";
+const store = {
+  get(){ try{ return JSON.parse(localStorage.getItem(KEY)||"null"); }catch(e){ return null; } },
+  set(v){ try{ localStorage.setItem(KEY, JSON.stringify(v)); }catch(e){} },
+  clear(){ try{ localStorage.removeItem(KEY); }catch(e){} }
+};
+const blank = d => d.rounds.map(r => r.courts.map(()=>({a:null,b:null})));
+function freshState(){
+  return { mode:10,
+    s:{ "10":blank(DATA10), "11":blank(DATA11) },
+    f:{ "10":{a:null,b:null}, "11":{a:null,b:null} } };
+}
+let ST = store.get();
+if(!ST || !ST.s || !ST.f){ ST = freshState(); }
+// backfill (e.g. first time 11 exists)
+if(!ST.s["11"]) ST.s["11"]=blank(DATA11);
+if(!ST.f["11"]) ST.f["11"]={a:null,b:null};
+
+let D, scores, finale, MEN;
+function bind(){
+  D = ST.mode===11 ? DATA11 : DATA10;
+  scores = ST.s[ST.mode];
+  finale = ST.f[ST.mode];
+  MEN = new Set(D.men);
+}
+function persist(){ store.set(ST); }
+const genderTag = n => MEN.has(n) ? "M" : "V";
+
+/* ---------- rounds (scores) ---------- */
+function teamName(pair){ return `<span class="tname">${pair[0]} &amp; ${pair[1]}</span>`; }
+function buildRounds(){
+  const root = document.getElementById("roundsRoot");
+  root.innerHTML = "";
+  D.rounds.forEach((r, ri) => {
+    const card = document.createElement("div");
+    card.className = "round";
+    let courts = "";
+    r.courts.forEach((c, ci) => {
+      courts += `
+      <div class="court">
+        <div class="cflag"><span class="b">Baan ${c.baan}</span><span class="line"></span></div>
+        <div class="match">
+          <div class="team" data-r="${ri}" data-c="${ci}" data-s="a">${teamName(c.a)}
+            <div class="score"><input inputmode="numeric" pattern="[0-9]*" maxlength="2" data-r="${ri}" data-c="${ci}" data-s="a" aria-label="Punten ${c.a[0]} en ${c.a[1]}" placeholder="–"></div>
+          </div>
+          <div class="vs">VS</div>
+          <div class="team" data-r="${ri}" data-c="${ci}" data-s="b">${teamName(c.b)}
+            <div class="score"><input inputmode="numeric" pattern="[0-9]*" maxlength="2" data-r="${ri}" data-c="${ci}" data-s="b" aria-label="Punten ${c.b[0]} en ${c.b[1]}" placeholder="–"></div>
+          </div>
+        </div>
+        <div class="sumbar" data-sum="${ri}-${ci}"><span class="tag">tot max 24</span></div>
+      </div>`;
+    });
+    card.innerHTML = `<header><div class="rnum">${r.round}</div>
+      <div class="rmeta"><span class="t">${r.time}–${r.endtime}</span><span class="l">Ronde ${r.round}</span></div>
+      <div class="rest">Rust<b>${r.rest.join(" & ")}</b></div></header>${courts}`;
+    root.appendChild(card);
+  });
+  D.rounds.forEach((r,ri)=>r.courts.forEach((c,ci)=>["a","b"].forEach(s=>{
+    const v=scores[ri][ci][s];
+    root.querySelector(`input[data-r="${ri}"][data-c="${ci}"][data-s="${s}"]`).value=(v==null?"":v);
+  })));
+  const fin=document.createElement("div"); fin.id="finaleBox"; root.appendChild(fin);
+}
+function clamp(n){ n=Math.round(n); if(isNaN(n)) return null; return Math.max(0,Math.min(24,n)); }
+function roundInput(inp){
+  const ri=+inp.dataset.r, ci=+inp.dataset.c, s=inp.dataset.s, o=s==="a"?"b":"a";
+  const ov=scores[ri][ci][o]||0;
+  let v=inp.value===""?null:clamp(parseInt(inp.value,10));
+  if(v!==null) v=Math.max(0,Math.min(v,24-ov));
+  scores[ri][ci][s]=v; inp.value=(v==null?"":v);
+  persist(); updateSum(ri,ci); updateWin(ri,ci); renderBoard();
+}
+function updateSum(ri,ci){
+  const cell=scores[ri][ci];
+  const el=document.querySelector(`[data-sum="${ri}-${ci}"] .tag`); if(!el) return;
+  if(cell.a==null&&cell.b==null){ el.className="tag"; el.textContent="tot max 24"; return; }
+  const sum=(cell.a||0)+(cell.b||0); el.textContent=`${sum} / 24`;
+  el.className="tag "+(sum>24?"warn":(sum===24?"ok":"live"));
+}
+function updateWin(ri,ci){
+  const cell=scores[ri][ci];
+  document.querySelectorAll(`.team[data-r="${ri}"][data-c="${ci}"]`).forEach(t=>{
+    const s=t.dataset.s, mine=cell[s], other=cell[s==="a"?"b":"a"];
+    t.classList.toggle("win", mine!=null&&other!=null&&mine>other);
+  });
+}
+
+/* ---------- finale ---------- */
+function renderFinale(){
+  const box=document.getElementById("finaleBox"); if(!box) return;
+  const {games}=totals();
+  const any=Object.values(games).some(v=>v>0);
+  if(!any){
+    box.innerHTML=`<div class="round finale"><header><div class="rnum fin">F</div>
+      <div class="rmeta"><span class="t">15:45–16:00</span><span class="l">Finale</span></div>
+      <div class="rest">Baan<b>4</b></div></header>
+      <div class="court"><p class="fplaceholder">De finale wordt gespeeld door de <b>nummers 1 &amp; 3</b> tegen de <b>nummers 2 &amp; 4</b> van de eindstand. Vul eerst de rondes in.</p></div></div>`;
+    return;
+  }
+  const order=rank().order;
+  const teamA=[order[0],order[2]], teamB=[order[1],order[3]];
+  const nm=(p,r1,r2)=>`<span class="tname"><span class="seed">${r1}</span>${p[0]} &amp; <span class="seed">${r2}</span>${p[1]}</span>`;
+  box.innerHTML=`<div class="round finale"><header><div class="rnum fin">F</div>
+    <div class="rmeta"><span class="t">15:45–16:00</span><span class="l">Finale</span></div>
+    <div class="rest">Baan<b>4</b></div></header>
+    <div class="court"><div class="cflag"><span class="b gold">Finale · tot 24</span><span class="line"></span></div>
+      <div class="match">
+        <div class="team" id="finA">${nm(teamA,1,3)}<div class="score"><input inputmode="numeric" pattern="[0-9]*" maxlength="2" data-f="a" aria-label="Punten nummer 1 en 3" placeholder="–"></div></div>
+        <div class="vs">VS</div>
+        <div class="team" id="finB">${nm(teamB,2,4)}<div class="score"><input inputmode="numeric" pattern="[0-9]*" maxlength="2" data-f="b" aria-label="Punten nummer 2 en 4" placeholder="–"></div></div>
+      </div>
+      <div class="sumbar" id="finBar"><span class="tag">tot max 24</span></div><div id="finWin"></div>
+    </div></div>`;
+  ["a","b"].forEach(s=>{ box.querySelector(`input[data-f="${s}"]`).value = finale[s]==null?"":finale[s]; });
+  paintFinale(teamA,teamB);
+}
+function finInput(inp){
+  const s=inp.dataset.f, o=s==="a"?"b":"a", ov=finale[o]||0;
+  let v=inp.value===""?null:clamp(parseInt(inp.value,10));
+  if(v!==null) v=Math.max(0,Math.min(v,24-ov));
+  finale[s]=v; inp.value=(v==null?"":v); persist();
+  const order=rank().order; paintFinale([order[0],order[2]],[order[1],order[3]]);
+}
+function paintFinale(teamA,teamB){
+  const bar=document.querySelector("#finBar .tag"); if(!bar) return;
+  const A=document.getElementById("finA"),B=document.getElementById("finB"),win=document.getElementById("finWin");
+  if(finale.a==null&&finale.b==null){ bar.className="tag"; bar.textContent="tot max 24"; A.classList.remove("win");B.classList.remove("win");win.innerHTML=""; return; }
+  const sum=(finale.a||0)+(finale.b||0); bar.textContent=`${sum} / 24`; bar.className="tag "+(sum>24?"warn":(sum===24?"ok":"live"));
+  A.classList.toggle("win", finale.a!=null&&finale.b!=null&&finale.a>finale.b);
+  B.classList.toggle("win", finale.a!=null&&finale.b!=null&&finale.b>finale.a);
+  if(finale.a==null||finale.b==null){ win.innerHTML=""; return; }
+  if(finale.a===finale.b){ win.innerHTML=`<div class="champ tie">Gelijkspel — speel een beslissend punt</div>`; }
+  else{ const w=finale.a>finale.b?teamA:teamB; win.innerHTML=`<div class="champ">🏆 Toernooiwinnaars · ${w[0]} &amp; ${w[1]}</div>`; }
+}
+
+/* ---------- totals / rank ---------- */
+function totals(){
+  const pts={},games={},sched={},rest={};
+  [...D.men,...D.women].forEach(p=>{pts[p]=0;games[p]=0;sched[p]=0;rest[p]=0;});
+  D.rounds.forEach((r,ri)=>{
+    r.rest.forEach(p=>rest[p]++);
+    r.courts.forEach((c,ci)=>{
+      const sc=scores[ri][ci];
+      const done = sc.a!=null && sc.b!=null;   // potje telt pas als beide scores staan
+      [["a",c.a],["b",c.b]].forEach(([s,pair])=>pair.forEach(pl=>{
+        sched[pl]++;
+        if(done){ games[pl]++; pts[pl]+=sc[s]; }
+      }));
+    });
+  });
+  const avg={}; [...D.men,...D.women].forEach(p=>avg[p]= games[p]>0 ? pts[p]/games[p] : 0);
+  return {pts,games,sched,rest,avg};
+}
+function rank(){
+  const {avg,pts,games}=totals();
+  const order=[...D.men,...D.women].sort((a,b)=> avg[b]-avg[a] || pts[b]-pts[a] || a.localeCompare(b));
+  let rk=[],prev=null,place=0,seen=0;
+  order.forEach(p=>{seen++; if(avg[p]!==prev){place=seen;prev=avg[p];} rk.push(place);});
+  return {order,rk,avg,pts,games};
+}
+function renderBoard(){
+  const {order,rk,avg,pts,games}=rank(); const {rest}=totals();
+  const any=Object.values(games).some(v=>v>0);
+  const box=document.getElementById("boardRows"); box.innerHTML="";
+  order.forEach((p,i)=>{
+    const row=document.createElement("div");
+    row.className="row"+(any&&rk[i]===1?" lead":"");
+    const a = games[p]>0 ? avg[p].toFixed(1) : "–";
+    row.innerHTML=`<div class="rk">${any?rk[i]:"·"}</div>
+      <div class="who"><span class="g">${genderTag(p)}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p}</span></div>
+      <div class="pl">${pts[p]} pt · ${games[p]}/${8-rest[p]} pot</div><div class="pts">${a}</div>`;
+    box.appendChild(row);
+  });
+  const lead=document.getElementById("leadchip");
+  if(any){ lead.hidden=false; document.getElementById("leadName").textContent=order[0]; document.getElementById("leadPts").textContent=avg[order[0]].toFixed(1); }
+  else lead.hidden=true;
+  renderFinale();
+}
+
+/* ---------- WK-style schema ---------- */
+function buildSchema(){
+  const root=document.getElementById("p-schema"); root.innerHTML="";
+  D.rounds.forEach(r=>{
+    const md=document.createElement("div"); md.className="md";
+    let fx="";
+    r.courts.forEach(c=>{
+      fx+=`<div class="fx"><div class="t1"><div class="nm">${c.a[0]} &amp; ${c.a[1]}</div></div>
+        <div class="ctr"><span class="baan">Baan ${c.baan}</span><span class="vs">vs</span></div>
+        <div class="t2"><div class="nm">${c.b[0]} &amp; ${c.b[1]}</div></div></div>`;
+    });
+    md.innerHTML=`<div class="mh"><span class="n">Speelronde ${r.round}</span><span class="tm">${r.time}–${r.endtime}</span></div>
+      ${fx}<div class="rst">Rust: <b>${r.rest.join(" & ")}</b></div>`;
+    root.appendChild(md);
+  });
+  const md=document.createElement("div"); md.className="md fin";
+  md.innerHTML=`<div class="mh"><span class="n">Finale</span><span class="tm">15:45–16:00</span></div>
+    <div class="fx"><div class="t1"><div class="nm"><span class="seed">1</span>&amp;<span class="seed">3</span> van de stand</div></div>
+      <div class="ctr"><span class="baan">Baan 4</span><span class="vs">vs</span></div>
+      <div class="t2"><div class="nm"><span class="seed">2</span>&amp;<span class="seed">4</span> van de stand</div></div></div>
+    <div class="fnote">De vier hoogst geëindigde spelers spelen de beslissende finale. De winnaars zijn de toernooiwinnaars — vul de finalescore in bij <b>Scores</b>.</div>`;
+  root.appendChild(md);
+}
+
+/* ---------- timeline ---------- */
+function buildTimeline(){
+  const ul=document.getElementById("timeline");
+  ul.innerHTML=`<li><span class="tt">14:00–14:08</span><span>Uitleg + warming-up</span></li>`+
+    D.rounds.map(r=>`<li><span class="tt">${r.time}–${r.endtime}</span><span>Ronde ${r.round}</span></li>`).join("")+
+    `<li><span class="tt">15:45–16:00</span><span><b>Finale</b> — nr. 1 &amp; 3 tegen nr. 2 &amp; 4 (baan 4)</span></li>`;
+}
+
+/* ---------- mode / apply ---------- */
+function applyMode(){
+  bind();
+  document.getElementById("playersPill").textContent = ST.mode===11?"11":"10";
+  document.getElementById("setupSub").textContent = ST.mode===11?"11 spelers · Lune speelt mee · 3 rusten per ronde":"10 spelers · 2 rusten per ronde";
+  document.getElementById("luneToggle").checked = ST.mode===11;
+  buildRounds(); buildSchema(); buildTimeline();
+  D.rounds.forEach((r,ri)=>r.courts.forEach((c,ci)=>{updateSum(ri,ci);updateWin(ri,ci);}));
+  renderBoard();
+}
+
+/* ---------- events (delegated once) ---------- */
+document.addEventListener("input",e=>{
+  const inp=e.target.closest("input"); if(!inp) return;
+  if(inp.dataset.f!==undefined) finInput(inp);
+  else if(inp.dataset.r!==undefined) roundInput(inp);
+});
+document.addEventListener("click",e=>{
+  return; // steppers verwijderd — scores worden getypt
+});
+
+document.getElementById("luneToggle").addEventListener("change",e=>{
+  ST.mode = e.target.checked?11:10; persist(); applyMode();
+});
+
+/* reset: two-step, no confirm() (blocked in sandboxes) */
+let armed=false, armTimer=null;
+const resetBtn=document.getElementById("resetBtn");
+resetBtn.addEventListener("click",()=>{
+  if(!armed){
+    armed=true; resetBtn.classList.add("armed"); resetBtn.textContent="Zeker weten? Tik nogmaals";
+    armTimer=setTimeout(()=>{armed=false;resetBtn.classList.remove("armed");resetBtn.textContent="Scores wissen";},3500);
+    return;
+  }
+  clearTimeout(armTimer); armed=false; resetBtn.classList.remove("armed");
+  ST.s[ST.mode]=blank(D); ST.f[ST.mode]={a:null,b:null};
+  bind(); persist();
+  buildRounds();
+  D.rounds.forEach((r,ri)=>r.courts.forEach((c,ci)=>{updateSum(ri,ci);updateWin(ri,ci);}));
+  renderBoard();
+  resetBtn.textContent="Gewist ✓";
+  setTimeout(()=>{resetBtn.textContent="Scores wissen";},1500);
+});
+
+/* tabs */
+const tabs=[...document.querySelectorAll('.tab')];
+tabs.forEach(tab=>tab.addEventListener("click",()=>{
+  tabs.forEach(t=>{const on=t===tab; t.setAttribute("aria-selected",on);
+    document.getElementById(t.getAttribute("aria-controls")).hidden=!on;});
+  window.scrollTo({top:0});
+}));
+
+applyMode();
+</script>
+</body>
+</html>
