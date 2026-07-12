@@ -212,6 +212,11 @@ section[hidden]{display:none}
 .setmsg.err{background:var(--coral-soft);color:var(--coral)}
 .setnote{font-size:11.5px;color:var(--muted);text-align:center;margin:2px 0 0}
 #set-add{font-size:12px;padding:8px 12px;margin-top:2px}
+.fld select{height:42px;border:1.5px solid var(--line);border-radius:10px;padding:0 10px;font-size:14.5px;background:#FBFCFB;color:var(--ink);font-family:'Inter',sans-serif}
+.fld select:focus{outline:none;border-color:var(--teal);background:#fff;box-shadow:0 0 0 3px rgba(21,154,140,.15)}
+.round.nextlock{opacity:.9}
+.round.nextlock>header{background:#12403A}
+.round.nextlock .rnum{background:var(--teal-soft);color:var(--court)}
 footer{color:var(--muted);font-size:11.5px;text-align:center;padding:10px 0 26px}
 footer .credit{display:block;margin-top:4px;color:#E86AA6;font-style:italic;font-size:11px}
 @media (max-width:420px){.rmeta .l{display:none}.team{padding:8px}.tname{font-size:12.5px}}
@@ -323,6 +328,7 @@ footer .credit{display:block;margin-top:4px;color:#E86AA6;font-style:italic;font
       <div class="setcard"><h3>Opzet</h3>
         <label class="fld"><span>Banen (gescheiden door komma)</span><input id="set-banen" type="text" placeholder="4, 5"></label>
         <label class="fld"><span>Aantal speelrondes</span><input id="set-rondes" type="number" min="1" max="40"></label>
+        <label class="fld"><span>Schema-modus</span><select id="set-modus"><option value="vast">Vast — heel schema vooraf</option><option value="dynamisch">Dynamisch — teams per ronde op basis van de stand (Mexicano)</option></select></label>
         <label class="fld"><span>Max punten per potje</span><input id="set-max" type="number" min="1" max="99"></label>
         <label class="fld chk"><input id="set-mixed" type="checkbox"><span>Mixed starten (eerste rondes man/vrouw per team)</span></label>
       </div>
@@ -381,7 +387,7 @@ const DEFAULT_CFG = {
   naam:"Kluis & Co - Padel", datum:"",
   players:[...DATA10.men.map(n=>({n,g:"m"})), ...DATA10.women.map(n=>({n,g:"v"}))],
   banen:["4","5"], rondes:8, start:"14:08", minPerRonde:12, finaleMin:15, maxPunten:24, mixed:true,
-  wisseltijd:2, pauzeVoorFinale:5, warmup:true, warmupMin:5
+  wisseltijd:2, pauzeVoorFinale:5, warmup:true, warmupMin:5, modus:"vast"
 };
 function defaultCfg(){ return JSON.parse(JSON.stringify(DEFAULT_CFG)); }
 function numOr(v,def,min,max){ let n=parseInt(v,10); if(isNaN(n)) n=def; return Math.max(min,Math.min(max,n)); }
@@ -404,7 +410,8 @@ function normalizeCfg(c){
     wisseltijd: numOr(c.wisseltijd, d.wisseltijd, 0, 120),
     pauzeVoorFinale: numOr(c.pauzeVoorFinale, d.pauzeVoorFinale, 0, 240),
     warmup: (c.warmup===undefined ? d.warmup : !!c.warmup),
-    warmupMin: numOr(c.warmupMin, d.warmupMin, 0, 120)
+    warmupMin: numOr(c.warmupMin, d.warmupMin, 0, 120),
+    modus: (c.modus==="dynamisch" ? "dynamisch" : "vast")
   };
 }
 
@@ -457,8 +464,12 @@ function generateSchedule(cfgIn){
   // Cap op de helft van de rondes zodat er genoeg balanceerrondes overblijven.
   const mixedRounds = cfg.mixed ? Math.max(1, Math.min(3, Math.floor(R/2))) : 0;
   base.mixedRounds = mixedRounds;
+  const dynamic=(cfg.modus==="dynamisch");
+  base.modus=cfg.modus; base.dynamic=dynamic; base.totalRounds=R;
+  base.start=cfg.start; base.step=step; base.minPerRonde=cfg.minPerRonde;
+  const genRounds = dynamic ? Math.min(R, Math.max(1, mixedRounds)) : R;
   let mixedViol=0;
-  for(let r=0;r<R;r++){
+  for(let r=0;r<genRounds;r++){
     const roundMixed = r < mixedRounds;
     const byRest=list=>[...list].sort((a,b)=> restCount[a]-restCount[b] || lastRest[a]-lastRest[b] || (Math.random()-0.5));
     let rest=null;
@@ -480,6 +491,39 @@ function generateSchedule(cfgIn){
   }
   base.mixedViol=mixedViol;
   return base;
+}
+
+// Stand (gemiddelde) op basis van de tot nu toe gespeelde rondes
+function nextRoundStandings(sched, scoresArr){
+  const names=[...sched.men, ...sched.women];
+  const pts={},games={}; names.forEach(n=>{pts[n]=0;games[n]=0;});
+  sched.rounds.forEach((r,ri)=>r.courts.forEach((c,ci)=>{
+    const sc=scoresArr[ri] && scoresArr[ri][ci];
+    if(sc && sc.a!=null && sc.b!=null){
+      c.a.forEach(p=>{pts[p]+=sc.a;games[p]++;});
+      c.b.forEach(p=>{pts[p]+=sc.b;games[p]++;});
+    }
+  }));
+  const avg={}; names.forEach(n=>avg[n]= games[n]>0 ? pts[n]/games[n] : 0);
+  return {pts,games,avg};
+}
+// Dynamisch (Mexicano): bepaalt de volgende ronde op basis van de stand. Deterministisch,
+// zodat elk apparaat exact dezelfde ronde berekent (geen conflicten bij live delen).
+function generateNextRound(sched, scoresArr, cfg){
+  const names=[...sched.men, ...sched.women];
+  const idxOf={}; names.forEach((n,i)=>idxOf[n]=i);
+  const C=sched.banen.length, perRound=4*C, restN=names.length-perRound;
+  if(restN<0) return null;
+  const restCount={}; names.forEach(n=>restCount[n]=0);
+  sched.rounds.forEach(r=>r.rest.forEach(n=>{ if(restCount[n]!=null) restCount[n]++; }));
+  const {avg,pts}=nextRoundStandings(sched, scoresArr);
+  const resters=[...names].sort((a,b)=> restCount[a]-restCount[b] || idxOf[a]-idxOf[b]).slice(0,restN);
+  const restSet=new Set(resters);
+  const playing=names.filter(n=>!restSet.has(n)).sort((a,b)=> avg[b]-avg[a] || pts[b]-pts[a] || idxOf[a]-idxOf[b]);
+  const courts=[];
+  for(let i=0;i<C;i++){ const f=playing.slice(i*4,i*4+4); courts.push({ baan:sched.banen[i], a:[f[0],f[3]], b:[f[1],f[2]] }); }
+  const idx=sched.rounds.length, st=toMin(cfg.start), step=(cfg.minPerRonde+cfg.wisseltijd), t=st+idx*step;
+  return { round:idx+1, time:toHHMM(t), endtime:toHHMM(t+cfg.minPerRonde), rest:resters, courts };
 }
 
 // Wikkelt het oude, met de hand gemaakte schema in de nieuwe vorm (voor upgrade zonder scores te verliezen)
@@ -627,6 +671,12 @@ function buildRounds(){
     const v=pending[ri][ci][s];
     root.querySelector(`input[data-r="${ri}"][data-c="${ci}"][data-s="${s}"]`).value=(v==null?"":v);
   })));
+  if(D.dynamic && D.rounds.length < (D.totalRounds||D.rounds.length)){
+    const nx=document.createElement("div"); nx.className="round nextlock";
+    const nextNo=D.rounds.length+1;
+    nx.innerHTML=`<header><div class="rnum">${nextNo}</div><div class="rmeta"><span class="t">Volgt</span><span class="l">Ronde ${nextNo} van ${D.totalRounds}</span></div></header><div class="court"><p class="fplaceholder">🔒 Deze ronde wordt automatisch samengesteld op basis van de stand zodra ronde ${D.rounds.length} volledig is ingevuld en opgeslagen.</p></div>`;
+    root.appendChild(nx);
+  }
   const fin=document.createElement("div"); fin.id="finaleBox"; root.appendChild(fin);
 }
 function clamp(n){ n=Math.round(n); if(isNaN(n)) return null; return Math.max(0,Math.min(MAX,n)); }
@@ -670,9 +720,25 @@ function updateSaveState(ri,ci){
   btn.textContent = hasSaved ? "Opgeslagen ✓" : "Opslaan";
   if(tag) tag.hidden = !dirty;
 }
+function maybeUnlockNextRound(){
+  const sched=ST.sched;
+  if(!sched || !sched.dynamic) return false;
+  if(sched.rounds.length >= sched.totalRounds) return false;
+  const li=sched.rounds.length-1; if(li<0) return false;
+  const done = scores[li] && scores[li].every(c=>c.a!=null && c.b!=null);
+  if(!done) return false;
+  const nr=generateNextRound(sched, scores, ST.cfg); if(!nr) return false;
+  sched.rounds.push(nr);
+  scores.push(nr.courts.map(()=>({a:null,b:null})));
+  pending.push(nr.courts.map(()=>({a:null,b:null})));
+  return true;
+}
 function saveMatch(ri,ci){
   scores[ri][ci] = { a: pending[ri][ci].a, b: pending[ri][ci].b };
-  persist(); updateSaveState(ri,ci); renderBoard();
+  const unlocked = maybeUnlockNextRound();
+  persist();
+  if(unlocked){ render(); }
+  else { updateSaveState(ri,ci); renderBoard(); }
 }
 
 /* ---------- finale ---------- */
@@ -680,6 +746,13 @@ function renderFinale(){
   const box=document.getElementById("finaleBox"); if(!box) return;
   const {games}=totals();
   const any=Object.values(games).some(v=>v>0);
+  if(D.dynamic && !(D.rounds.length>=(D.totalRounds||D.rounds.length) && allRoundsComplete())){
+    box.innerHTML=`<div class="round finale"><header><div class="rnum fin">F</div>
+      <div class="rmeta"><span class="t">${D.finaleTime}</span><span class="l">Finale</span></div>
+      <div class="rest">Baan<b>${D.finaleBaan}</b></div></header>
+      <div class="court"><p class="fplaceholder">Dynamisch schema — de finale (nr. 1 &amp; 3 tegen 2 &amp; 4) volgt zodra alle ${D.totalRounds} rondes zijn gespeeld.</p></div></div>`;
+    return;
+  }
   if(!any){
     box.innerHTML=`<div class="round finale"><header><div class="rnum fin">F</div>
       <div class="rmeta"><span class="t">${D.finaleTime}</span><span class="l">Finale</span></div>
@@ -871,14 +944,18 @@ function buildTimeline(){
   const cfg=ST.cfg||defaultCfg();
   const wm=(cfg.warmup!==false), wMin=(cfg.warmupMin==null?5:cfg.warmupMin);
   const warmStart=toHHMM(toMin(cfg.start)-wMin), rounds=(D.rounds||[]), finBaan=D.finaleBaan;
+  const total=D.totalRounds||rounds.length, step=(cfg.minPerRonde+cfg.wisseltijd), st=toMin(cfg.start);
+  const rtime=i=> rounds[i] ? `${rounds[i].time}–${rounds[i].endtime}` : `${toHHMM(st+i*step)}–${toHHMM(st+i*step+cfg.minPerRonde)}`;
+  const nlRounds=[], enRounds=[];
+  for(let i=0;i<total;i++){ nlRounds.push({t:rtime(i), l:`Ronde ${i+1}`}); enRounds.push({t:rtime(i), l:`Round ${i+1}`}); }
   const rowsNL = [
     ...(wm?[{t:`${warmStart}–${cfg.start}`, l:"Uitleg + warming-up"}]:[]),
-    ...rounds.map(r=>({t:`${r.time}–${r.endtime}`, l:`Ronde ${r.round}`})),
+    ...nlRounds,
     {t:D.finaleTime, l:`<b>Finale</b> — nr. 1 &amp; 3 tegen nr. 2 &amp; 4 (baan ${finBaan})`}
   ];
   const rowsEN = [
     ...(wm?[{t:`${warmStart}–${cfg.start}`, l:"Explanation + warm-up"}]:[]),
-    ...rounds.map(r=>({t:`${r.time}–${r.endtime}`, l:`Round ${r.round}`})),
+    ...enRounds,
     {t:D.finaleTime, l:`<b>Final</b> — no. 1 &amp; 3 vs no. 2 &amp; 4 (court ${finBaan})`}
   ];
   const nl=document.getElementById("timeline-nl"); if(nl) nl.innerHTML=mk(rowsNL);
@@ -983,6 +1060,7 @@ function buildSettings(){
   svSet("set-wissel",cfg.wisseltijd); svSet("set-pauze",cfg.pauzeVoorFinale); svSet("set-warmupmin",cfg.warmupMin);
   const mx=document.getElementById("set-mixed"); if(mx) mx.checked=!!cfg.mixed;
   const wu=document.getElementById("set-warmup"); if(wu) wu.checked=(cfg.warmup!==false);
+  const md=document.getElementById("set-modus"); if(md) md.value=(cfg.modus==="dynamisch"?"dynamisch":"vast");
   const wrap=document.getElementById("set-players");
   if(wrap) wrap.innerHTML=(cfg.players||[]).map(p=>playerRowHTML(p.n,p.g)).join("");
   updateSetCount();
@@ -1000,6 +1078,7 @@ function readSettingsForm(){
     start:svGet("set-start"), minPerRonde:svGet("set-min"), finaleMin:svGet("set-finmin"),
     wisseltijd:svGet("set-wissel"), pauzeVoorFinale:svGet("set-pauze"),
     warmup: wu?wu.checked:true, warmupMin:svGet("set-warmupmin"),
+    modus: (document.getElementById("set-modus") ? document.getElementById("set-modus").value : "vast"),
     mixed: mx?mx.checked:false });
 }
 function showSetMsg(t,isErr){ const m=document.getElementById("set-msg"); if(!m) return; m.textContent=t; m.className="setmsg "+(isErr?"err":"ok"); m.hidden=false; }
@@ -1042,5 +1121,4 @@ tabs.forEach(tab=>tab.addEventListener("click",()=>{
 
 render();
 </script>
-</body>
-</html>
+</
