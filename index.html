@@ -1215,14 +1215,17 @@ render();
     const pw = code.value.trim();
     if(pw.length < 6){ say("Vul de volledige code in."); return; }
     btn.disabled = true; say("Even controleren…", true);
+    // Tijdstip vooraf zetten: onAuthStateChanged kan afvuren vóór de .then() hieronder,
+    // en zou de verse sessie anders als 'verlopen' zien.
+    try{ localStorage.setItem(AUTH_TS_KEY, String(Date.now())); }catch(e){}
     auth.signInWithEmailAndPassword(SHARED_EMAIL, pw)
       .then(()=>{
-        try{ localStorage.setItem(AUTH_TS_KEY, String(Date.now())); }catch(e){}
         code.value = ""; say("");
         btn.disabled = false;
         // openApp() volgt automatisch via onAuthStateChanged
       })
       .catch(err=>{
+        try{ localStorage.removeItem(AUTH_TS_KEY); }catch(e){}
         btn.disabled = false;
         const c = err && err.code || "";
         if(c==="auth/wrong-password" || c==="auth/invalid-credential" || c==="auth/invalid-login-credentials"){
