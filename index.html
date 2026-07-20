@@ -354,7 +354,45 @@ footer .credit{display:block;margin-top:4px;color:#E86AA6;font-style:italic;font
 
 <footer><span class="credit">made by soof &amp; jm 2026</span></footer>
 
+<!-- ===== Toegangscode-scherm ===== -->
+<style>
+#gate{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
+  padding:24px;background:linear-gradient(180deg,var(--court) 0%,var(--court2) 100%)}
+#gate[hidden]{display:none}
+#gate:after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(90deg,transparent 49.6%,rgba(127,207,195,.30) 49.6%,rgba(127,207,195,.30) 50.4%,transparent 50.4%)}
+.gatebox{position:relative;z-index:1;width:100%;max-width:380px;background:var(--card);
+  border-radius:18px;padding:26px 22px;box-shadow:0 18px 50px rgba(0,0,0,.28)}
+.gatebox .eyebrow{color:var(--teal)}
+.gatebox h2{font-size:26px;font-weight:900;text-transform:uppercase;margin:6px 0 4px;line-height:1}
+.gatebox p.sub{margin:0 0 18px;font-size:13.5px;color:var(--muted)}
+#gate-code{width:100%;font-family:'JetBrains Mono',monospace;font-size:17px;letter-spacing:.04em;
+  padding:13px 14px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--ink)}
+#gate-code:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(21,154,140,.16)}
+#gate-btn{width:100%;margin-top:12px;font-family:'Archivo',sans-serif;font-weight:800;font-size:14px;
+  text-transform:uppercase;letter-spacing:.03em;color:#fff;background:var(--court);
+  border:0;border-radius:12px;padding:14px;cursor:pointer;transition:.15s}
+#gate-btn:hover{background:var(--teal)}
+#gate-btn:disabled{opacity:.55;cursor:default}
+#gate-msg{margin:12px 0 0;font-size:13px;font-weight:600;color:var(--coral);min-height:18px}
+#gate-msg[data-ok="1"]{color:var(--good)}
+</style>
+<div id="gate" hidden>
+  <div class="gatebox">
+    <div class="eyebrow">Kluis &amp; Co · Padel</div>
+    <h2>Toegangs<span>code</span></h2>
+    <p class="sub">Vul de code in om de scores te bekijken en bij te werken.</p>
+    <form id="gate-form" autocomplete="off">
+      <input id="gate-code" type="password" inputmode="text" autocomplete="current-password"
+             placeholder="Code" aria-label="Toegangscode">
+      <button id="gate-btn" type="submit">Naar het toernooi</button>
+    </form>
+    <p id="gate-msg" role="status"></p>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-database-compat.js"></script>
 <script>
 const DATA10 = {"men": ["Loek", "Joris", "Maurits", "MJ", "Jouk"], "women": ["Hannah", "Hannah L", "Iris", "Pleun", "Soof"], "rounds": [{"round": 1, "time": "14:08", "endtime": "14:20", "rest": ["Loek", "Iris"], "courts": [{"baan": "4", "a": ["Joris", "Hannah L"], "b": ["Maurits", "Hannah"]}, {"baan": "5", "a": ["MJ", "Pleun"], "b": ["Jouk", "Soof"]}]}, {"round": 2, "time": "14:20", "endtime": "14:32", "rest": ["Joris", "Pleun"], "courts": [{"baan": "4", "a": ["Loek", "Hannah L"], "b": ["MJ", "Soof"]}, {"baan": "5", "a": ["Maurits", "Iris"], "b": ["Jouk", "Hannah"]}]}, {"round": 3, "time": "14:32", "endtime": "14:44", "rest": ["Maurits", "Soof"], "courts": [{"baan": "4", "a": ["Loek", "Hannah"], "b": ["Jouk", "Pleun"]}, {"baan": "5", "a": ["Joris", "Iris"], "b": ["MJ", "Hannah L"]}]}, {"round": 4, "time": "14:44", "endtime": "14:56", "rest": ["MJ", "Hannah"], "courts": [{"baan": "4", "a": ["Loek", "Pleun"], "b": ["Maurits", "Hannah L"]}, {"baan": "5", "a": ["Joris", "Soof"], "b": ["Jouk", "Iris"]}]}, {"round": 5, "time": "14:56", "endtime": "15:08", "rest": ["Jouk", "Hannah L"], "courts": [{"baan": "4", "a": ["Loek", "Iris"], "b": ["Joris", "Pleun"]}, {"baan": "5", "a": ["Maurits", "Soof"], "b": ["MJ", "Hannah"]}]}, {"round": 6, "time": "15:08", "endtime": "15:20", "rest": ["Loek", "Hannah"], "courts": [{"baan": "4", "a": ["Joris", "Maurits"], "b": ["Pleun", "Soof"]}, {"baan": "5", "a": ["MJ", "Iris"], "b": ["Jouk", "Hannah L"]}]}, {"round": 7, "time": "15:20", "endtime": "15:32", "rest": ["Joris", "Hannah L"], "courts": [{"baan": "4", "a": ["Loek", "Soof"], "b": ["Hannah", "Iris"]}, {"baan": "5", "a": ["Maurits", "Pleun"], "b": ["MJ", "Jouk"]}]}, {"round": 8, "time": "15:32", "endtime": "15:44", "rest": ["Maurits", "Iris"], "courts": [{"baan": "4", "a": ["Loek", "Jouk"], "b": ["Hannah L", "Soof"]}, {"baan": "5", "a": ["Joris", "MJ"], "b": ["Hannah", "Pleun"]}]}]};
@@ -376,6 +414,13 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const stateRef = firebase.database().ref("state");
+
+/* ---------- Toegang: één gedeeld account, wachtwoord = de toegangscode ----------
+   De code staat NIET in deze broncode. Firebase controleert hem op de server.   */
+const SHARED_EMAIL = "janmarius1@gmail.com";
+const AUTH_TS_KEY  = "padel_auth_ts";
+const AUTH_MAX_MS  = 24*60*60*1000;   // ingelogd blijven: maximaal 1 dag
+let authed = false, syncStarted = false;
 
 /* ====== FASE 1: instelbare variabelen + schemagenerator ====== */
 function pad2(n){ return String(n).padStart(2,"0"); }
@@ -618,18 +663,21 @@ function mergePendingOnRemote(remote){
   }
 }
 
-// Live updates van andere spelers ontvangen
-stateRef.on("value", snap=>{
-  const val = snap.val();
-  if(val===null){ stateRef.set(encodeForFirebase(ST)); return; } // Firebase is nog leeg -> onze stand wordt de startstand
-  const remote = migrate(decodeFromFirebase(val));
-  if(JSON.stringify(remote)===JSON.stringify(ST)) return; // bevestiging van onze eigen wijziging
-  mergePendingOnRemote(remote);
-  ST = remote; applyState();
-  render();
-});
+// Live updates van andere spelers ontvangen -- start pas ná het inloggen
+function startSync(){
+  if(syncStarted) return; syncStarted = true;
+  stateRef.on("value", snap=>{
+    const val = snap.val();
+    if(val===null){ stateRef.set(encodeForFirebase(ST)); return; } // Firebase is nog leeg -> onze stand wordt de startstand
+    const remote = migrate(decodeFromFirebase(val));
+    if(JSON.stringify(remote)===JSON.stringify(ST)) return; // bevestiging van onze eigen wijziging
+    mergePendingOnRemote(remote);
+    ST = remote; applyState();
+    render();
+  });
+}
 
-function persist(){ store.set(ST); stateRef.set(encodeForFirebase(ST)); }
+function persist(){ store.set(ST); if(authed) stateRef.set(encodeForFirebase(ST)); }
 const genderTag = n => MEN.has(n) ? "M" : "V";
 
 /* ---------- rounds (scores) ---------- */
@@ -1120,5 +1168,75 @@ tabs.forEach(tab=>tab.addEventListener("click",()=>{
 }));
 
 render();
+
+/* ---------- Toegangscode-scherm ---------- */
+(function bootAuth(){
+  const gate = document.getElementById("gate");
+  const form = document.getElementById("gate-form");
+  const code = document.getElementById("gate-code");
+  const btn  = document.getElementById("gate-btn");
+  const msg  = document.getElementById("gate-msg");
+  const auth = firebase.auth();
+
+  function say(t, ok){ msg.textContent = t || ""; if(ok) msg.dataset.ok="1"; else delete msg.dataset.ok; }
+  function openApp(){
+    authed = true;
+    gate.hidden = true;
+    document.body.style.overflow = "";
+    startSync();
+  }
+  function showGate(){
+    authed = false;
+    gate.hidden = false;
+    document.body.style.overflow = "hidden";
+    setTimeout(()=>code.focus(), 60);
+  }
+
+  showGate(); // standaard dicht tot Firebase bevestigt dat je al ingelogd bent
+
+  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
+
+  auth.onAuthStateChanged(user=>{
+    if(!user){ showGate(); return; }
+    // Sessie verloopt na maximaal 1 dag
+    const ts = parseInt(localStorage.getItem(AUTH_TS_KEY)||"0", 10);
+    if(!ts || Date.now()-ts > AUTH_MAX_MS){
+      localStorage.removeItem(AUTH_TS_KEY);
+      auth.signOut().catch(()=>{});
+      showGate();
+      say("Je sessie is verlopen. Vul de code opnieuw in.");
+      return;
+    }
+    openApp();
+  });
+
+  form.addEventListener("submit", e=>{
+    e.preventDefault();
+    const pw = code.value.trim();
+    if(pw.length < 6){ say("Vul de volledige code in."); return; }
+    btn.disabled = true; say("Even controleren…", true);
+    auth.signInWithEmailAndPassword(SHARED_EMAIL, pw)
+      .then(()=>{
+        try{ localStorage.setItem(AUTH_TS_KEY, String(Date.now())); }catch(e){}
+        code.value = ""; say("");
+        btn.disabled = false;
+        // openApp() volgt automatisch via onAuthStateChanged
+      })
+      .catch(err=>{
+        btn.disabled = false;
+        const c = err && err.code || "";
+        if(c==="auth/wrong-password" || c==="auth/invalid-credential" || c==="auth/invalid-login-credentials"){
+          say("Die code klopt niet.");
+        } else if(c==="auth/too-many-requests"){
+          say("Te vaak geprobeerd. Wacht even en probeer opnieuw.");
+        } else if(c==="auth/network-request-failed"){
+          say("Geen verbinding. Check je internet.");
+        } else {
+          say("Inloggen lukte niet ("+(c||"onbekende fout")+").");
+        }
+        code.select();
+      });
+  });
+})();
 </script>
 </
